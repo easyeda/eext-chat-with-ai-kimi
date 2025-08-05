@@ -302,6 +302,21 @@ body {
 	font-weight: 500;
 }
 
+/* ================= 复选框样式 ================= */
+.modern-checkbox {
+	width: 16px;
+	height: 16px;
+	margin-right: 8px;
+	cursor: pointer;
+}
+
+.input-group label:has(.modern-checkbox) {
+	display: flex;
+	align-items: center;
+	cursor: pointer;
+	font-weight: normal;
+}
+
 /* ================= 滚动条优化 ================= */
 #chat-container::-webkit-scrollbar {
 	width: 8px;

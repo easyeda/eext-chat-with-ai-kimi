@@ -3,7 +3,7 @@
 	"uuid": "9c660f0c94604636bc0fb9446f69a055",
 	"displayName": "AI助手Kimi",
 	"description": "通过设置 Kimi 的自定义 URL 和 Key 后进行AI对话，支持查询元件和解析网表",
-	"version": "1.3.7",
+	"version": "1.3.11",
 	"publisher": "JLCEDA",
 	"engines": {
 		"eda": "^2.2.34"

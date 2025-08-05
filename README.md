@@ -2,34 +2,65 @@
 
 ## 功能概述
 
-Kimi AI 助手是一款专为 PCB 设计人员开发的智能工具，提供以下核心功能：
+Kimi AI 助手是一款专为 PCB 设计人员开发的智能工具，具备以下核心功能：
 
-1. **内容查询**：在 PCB 设计过程中，用户可以通过AI对话查询所需的设计内容。
-2. **元件管理**：支持选取元件并查询其详细信息，包括相似物料的推荐、网表解析及电路分析。
-3. **智能交互**：通过 AI 对话实现高效的内容查询和问题解答。
+1. **内容查询**：在 PCB 设计过程中，用户可通过 AI 对话快速查询所需设计内容。
+2. **元件管理**：支持元件选取与详细信息查询，包括相似物料推荐、网表解析及电路分析。
+3. **智能交互**：通过 AI 对话实现高效内容检索与问题解答。
 
-## 用户界面
+![功能概览](images/c22286429bc15044a0eae325fa42fd5d905bba85e9e6077f945906a156759fd4.png)
 
-用户可以通过顶部菜单栏访问以下功能：
+## 功能入口
 
--   Kimi > Kimi AI 助手
--   Kimi > 关于
+用户可通过顶部菜单栏访问以下功能：
 
-# Kimi AI Assistant
+- Kimi > Kimi AI 助手
+- Kimi > 关于
 
-## Feature Overview
+## 使用说明
 
-Kimi AI Assistant is an intelligent tool developed specifically for PCB designers, providing the following core features:
+1. 在扩展管理器中启用扩展，并确保已开启 **外部交互**。
 
-1. **Content Query**: During the PCB design process, users can query required design content through AI dialogue.
+   ![启用外部交互](images/4711bf8484a67ab55c9cb8a5dbaadebafc53235f74ed1e6009dfc576d13495d7.png)
 
-2. **Component Management**: Supports selecting components and querying their detailed information, including similar material recommendations, netlist parsing, and circuit analysis.
+2. 点击右下角配置按钮，在配置页面中填写 API 密钥。
 
-3. **Intelligent Interaction**: Enables efficient content query and question answering through AI dialogue.
+   ![配置按钮](images/750dfb4beadcd6b50e9ebc8a9d71e4f1da84b9ef17246d6f08c4fe8e93c40523.png)
 
-## User Interface
+3. 在配置面板中填写 API 密钥。Kimi API 凭证获取方式详见：[Kimi API 获取指南](https://lceda001.feishu.cn/wiki/V9ScwIjk0iBc8fk9RhWcork9nGc)
 
-Users can access the following features through the top menu bar:
+   ![API配置面板](images/be725a35de8d9c8ea70693235452a1b40d37e6265970fce2f9735ce876d036cc.png)
 
--   Kimi > Kimi AI Assistant
--   Kimi > About
+## 功能介绍
+
+### AI 问答
+
+在输入框中输入原理图或 PCB 绘制的相关问题，AI 会根据问题给出专业回答。
+
+![AI问答演示](images/PixPin_2025-06-04_11-35-28.gif)
+
+### 元件查询
+
+点击底部 **查询元件** 按钮，再左键点击原理图上的元件，即可查询元件的详细信息。
+
+![元件查询演示](images/8dd5b6ed0c7f4ea100abe6e0dd9347242bd7bccc58e945dc8ed34f3f60f36f12.gif)
+
+### 相似物料推荐
+
+点击底部 **相似物料** 按钮，再左键点击原理图上的元件，即可查询该元件的替换物料。
+
+![相似物料演示](images/f537ff797be0a2cc644061aa3e3856c1d4b069468f67728421ac1fb765a0f3fb.gif)
+
+### 网表分析
+
+点击底部 **分析网表** 按钮，AI 会分析原理图中的网表，并给出详细分析结果。
+
+> 注：此功能 Tokens 消耗较大，后续版本将进行优化。
+
+![网表分析演示](images/cc938a4f4a2de5b95a1b8f9e6617bb831ae18ae85e46b0e9f3590135ea650eaa.gif)
+
+### 电路图分析
+
+选择视觉模型后，支持点击 **分析电路** 按钮或直接 Ctrl + V 粘贴图片到输入框，助手将会分析并回复电路图内容。
+
+![电路分析演示](images/8726c946606ae15c9f03e8ab2eadf02f5694c2774b5cb04075862dea87a03b8c.gif)
