@@ -1,0 +1,314 @@
+/* ================= 基础全局样式 ================= */
+body {
+	font-family: Arial, sans-serif;
+	background: white;
+	max-width: 460px;
+	margin: 0 auto;
+}
+
+/* ================= 聊天消息容器 ================= */
+#chat-container {
+	background-color: rgb(220, 222, 252);
+	width: 440px;
+	height: 420px;
+	margin-left: 10px;
+	margin-top: 5px;
+	padding-top: 10px;
+	border-radius: 8px;
+	overflow-y: scroll;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(0, 0, 0, 0.01) transparent;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+/* ================= 消息气泡优化 ================= */
+.user-message,
+.ai-message {
+	color: #000000;
+	padding: 12px 18px;
+	max-width: 70%;
+	border-radius: 15px;
+	box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+}
+
+.user-message {
+	background-color: #ffffff;
+	border-bottom-right-radius: 5px;
+	margin-right: 2%;
+}
+
+.ai-message {
+	background-color: #e6e6fa;
+	border-bottom-left-radius: 5px;
+	margin-left: 2%;
+}
+
+/* ================= 输入区域优化 ================= */
+.input-container {
+	position: relative;
+	width: 460px;
+	margin-top: 10px;
+	border: 2px solid #e5e7eb;
+	border-radius: 12px;
+	padding-bottom: 50px;
+}
+
+#message-input {
+	width: 428px;
+	min-height: 50px;
+	padding: 12px 16px;
+	border: none;
+	border-radius: 12px 12px 0 0;
+	background: #fff;
+	font-size: 14px;
+	line-height: 1.5;
+	transition: all 0.3s ease;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+	resize: none;
+}
+
+#message-input:focus {
+	outline: none;
+	border-color: #6366f1;
+	box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* ================= 按钮布局 ================= */
+.button-group {
+	position: absolute;
+	bottom: 8px;
+	left: 8px;
+	right: 8px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 8px;
+	padding: 0;
+}
+
+.function-buttons {
+	display: flex;
+	gap: 8px;
+	flex: 1;
+}
+
+/* ================= 按钮样式修复 ================= */
+/* 发送按钮 */
+#send-button {
+	width: 40px;
+	height: 40px;
+	padding: 8px;
+	border: none;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: #737add; /* 主要颜色保持紫色 */
+	color: white;
+	transition: all 0.2s ease;
+	box-shadow: 0 2px 4px rgba(115, 122, 221, 0.2);
+	cursor: pointer;
+}
+
+#send-button:hover {
+	background-color: #5861dd; /* 悬停颜色加深 */
+	transform: translateY(-1px);
+}
+
+/* 功能按钮统一样式 */
+.button-style {
+	height: 32px;
+	border: none;
+	border-radius: 8px;
+	background: #737add; /* 主要颜色 */
+	color: white;
+	padding: 6px 12px;
+	transition: all 0.2s ease;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	cursor: pointer;
+	font-size: 13px;
+	white-space: nowrap;
+}
+
+.button-style:hover {
+	background: #5861dd; /* 悬停颜色 */
+	transform: translateY(-1px);
+}
+
+/* 配置按钮特殊样式 */
+#config-button {
+	width: 32px;
+	height: 32px;
+	padding: 6px;
+	border-radius: 8px;
+	background: #737add; /* 与主色一致 */
+	border: none;
+	transition: all 0.2s ease;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+#config-button:hover {
+	background: #5861dd;
+}
+
+/* 配置按钮图标样式修复 */
+#config-button svg {
+	width: 20px;
+	height: 20px;
+	fill: white; /* 明确指定填充色 */
+	stroke: white; /* 明确指定线条颜色 */
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+/* ================= 配置面板样式 ================= */
+.config-panel {
+	display: none;
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	background: #ffffff;
+	border-radius: 16px;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+	padding: 24px;
+	width: 90%;
+	max-width: 400px;
+	z-index: 1000;
+	opacity: 0;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.config-panel.show {
+	display: block;
+	opacity: 1;
+}
+
+.config-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 20px;
+	padding-bottom: 12px;
+	border-bottom: 1px solid #f3f4f6;
+}
+
+.config-header h3 {
+	margin: 0;
+	font-size: 18px;
+	color: #1f2937;
+}
+
+.close-btn {
+	background: none;
+	border: none;
+	font-size: 24px;
+	color: #6b7280;
+	cursor: pointer;
+	padding: 4px;
+	transition: color 0.2s;
+}
+
+.close-btn:hover {
+	color: #1f2937;
+}
+
+.input-group {
+	margin-bottom: 16px;
+}
+
+.input-group label {
+	display: block;
+	margin-bottom: 8px;
+	font-size: 13px;
+	color: #374151;
+	font-weight: 500;
+}
+
+/* 修复缺失的输入框样式 */
+.modern-input {
+	width: 365px;
+	padding: 10px 14px;
+	border: 2px solid #e5e7eb;
+	border-radius: 8px;
+	font-size: 14px;
+	transition: all 0.3s ease;
+}
+
+.modern-input:focus {
+	outline: none;
+	border-color: #6366f1;
+	box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* 新增下拉框样式 */
+.input-group select.modern-input {
+	width: 100%;
+	padding: 8px 12px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	background-color: white;
+	font-size: 14px;
+	transition: border-color 0.3s;
+}
+
+.input-group select.modern-input:focus {
+	border-color: #409eff;
+	outline: none;
+	box-shadow: 0 0 3px rgba(64, 158, 255, 0.3);
+}
+
+/* 调整配置面板布局 */
+.config-content {
+	display: flex;
+	flex-direction: column;
+	gap: 15px; /* 增加元素间距 */
+}
+
+/* ================= 帮助链接样式 ================= */
+.tutorial-link {
+	display: flex;
+	align-items: center;
+	margin-top: 20px;
+	font-size: 13px;
+	color: #6366f1;
+	text-decoration: none;
+	transition: color 0.2s;
+}
+
+.tutorial-link:hover {
+	color: #4f46e5;
+}
+
+.help-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 18px;
+	height: 18px;
+	margin-right: 8px;
+	border-radius: 50%;
+	background: #e0e7ff;
+	color: #6366f1;
+	font-size: 12px;
+	font-weight: 500;
+}
+
+/* ================= 滚动条优化 ================= */
+#chat-container::-webkit-scrollbar {
+	width: 8px;
+	background: transparent;
+}
+
+#chat-container::-webkit-scrollbar-thumb {
+	background: rgba(0, 0, 0, 0.15);
+	border-radius: 4px;
+}

@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<!-- <link rel="stylesheet" href="style.css" /> -->
+		<link rel="stylesheet" href="/iframe/style.css" />
+		<title>Kimi AI助手</title>
+	</head>
+	<body>
+		<div id="chat-container"></div>
+
+		<div class="input-container">
+			<textarea id="message-input" placeholder="在这输入你的问题..."></textarea>
+			<div class="button-group">
+				<div class="function-buttons">
+					<button id="greet-button" class="button-style">
+						<span>查询元件</span>
+					</button>
+					<button id="similar-button" class="button-style">
+						<span>相似器件</span>
+					</button>
+					<button id="parse-netlist-button" class="button-style">
+						<span>检查引脚</span>
+					</button>
+				</div>
+
+				<div class="button-group-center">
+					<button id="config-button" class="button-style">
+						<svg viewBox="0 0 24 24">
+							<path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
+							<path
+								d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"
+							/>
+						</svg>
+					</button>
+				</div>
+
+				<button id="send-button">
+					<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
+						<path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+					</svg>
+				</button>
+			</div>
+		</div>
+
+		<!-- 修改后的配置面板 -->
+		<div class="config-panel">
+			<div class="config-header">
+				<h3>API 设置</h3>
+				<button class="close-btn">&times;</button>
+			</div>
+			<div class="config-content">
+				<div class="input-group">
+					<label for="api-url-input">接口地址</label>
+					<input type="text" id="api-url-input" class="modern-input" placeholder="请输入API URL" />
+				</div>
+				<div class="input-group">
+					<label for="api-key-input">API密钥</label>
+					<input type="text" id="api-key-input" class="modern-input" placeholder="请输入API Key" />
+				</div>
+				<a href="https://lceda001.feishu.cn/wiki/V9ScwIjk0iBc8fk9RhWcork9nGc?from=from_copylink" class="tutorial-link" target="_blank">
+					<span class="help-icon">?</span> 如何获取API凭证
+				</a>
+			</div>
+		</div>
+
+		<script>
+			document.addEventListener('DOMContentLoaded', async () => {
+				const chatContainer = document.getElementById('chat-container');
+				const messageInput = document.getElementById('message-input');
+				const sendButton = document.getElementById('send-button');
+				const apiUrlInput = document.getElementById('api-url-input');
+				const apiKeyInput = document.getElementById('api-key-input');
+				const greetButton = document.getElementById('greet-button'); // 选取元件按钮
+				const similarButton = document.getElementById('similar-button'); // 相似元件按钮
+
+				const parseNetlistButton = document.getElementById('parse-netlist-button');
+				parseNetlistButton.addEventListener('click', parseNetlist); //网表解析
+
+				const storedKey = eda.sys_Storage.getExtensionUserConfig('Key');
+				const storedUrl = eda.sys_Storage.getExtensionUserConfig('Url');
+
+				// JavaScript修改部分
+				// 配置面板交互优化
+				document.getElementById('config-button').addEventListener('click', (e) => {
+					e.stopPropagation();
+					const panel = document.querySelector('.config-panel');
+					panel.classList.toggle('show');
+				});
+
+				document.querySelector('.close-btn').addEventListener('click', () => {
+					document.querySelector('.config-panel').classList.remove('show');
+				});
+
+				document.addEventListener('click', (e) => {
+					const panel = document.querySelector('.config-panel');
+					if (!panel.contains(e.target) && e.target.id !== 'config-button' && !e.target.closest('#config-button')) {
+						panel.classList.remove('show');
+					}
+				});
+
+				if (storedUrl) {
+					apiUrlInput.value = storedUrl;
+				}
+				if (storedKey) {
+					apiKeyInput.value = storedKey;
+				}
+
+				apiUrlInput.addEventListener('input', () => {
+					eda.sys_Storage.setExtensionUserConfig('Url', apiUrlInput.value);
+				});
+
+				apiKeyInput.addEventListener('input', () => {
+					eda.sys_Storage.setExtensionUserConfig('Key', apiKeyInput.value);
+				});
+
+				let id = 0;
+				let isSelectingComponent = true; // 是否处于选择元件状态
+				let isSimilarComponent = true; // 是否处于相似元件状态
+
+				async function parseNetlist() {
+					console.log('解析网表...');
+
+					const netlistString = await eda.sch_Netlist.getNetlist('JLCEDA');
+
+					try {
+						const netlist = JSON.parse(netlistString);
+
+						Object.keys(netlist).forEach((deviceUniqueID) => {
+							const device = netlist[deviceUniqueID];
+
+							if (device.props && device.props.DeviceName) {
+								const deviceName = device.props.DeviceName;
+								let hasUnconnectedPins = false;
+								let pinsInfo = ''; // 存储当前设备的未连接引脚信息
+
+								Object.keys(device.pins).forEach((pinKey) => {
+									if (device.pins[pinKey] === '' || device.pins[pinKey] === null || device.pins[pinKey] === undefined) {
+										// 检查引脚是否未连接
+										hasUnconnectedPins = true;
+										pinsInfo += `pin ${pinKey}, `;
+									}
+								});
+
+								if (hasUnconnectedPins) {
+									pinsInfo = `器件 ${deviceName} 存在未连接引脚: ${pinsInfo}`;
+								} else {
+									pinsInfo = `器件 ${deviceName} 引脚全连接.`;
+								}
+
+								displayMessage(pinsInfo, null, false);
+							} else {
+								displayMessage(`Device with ID ${deviceUniqueID} does not have props or DeviceName.`, null, false);
+							}
+						});
+					} catch (error) {
+						console.error('Error parsing netlist:', error);
+						displayMessage(`Error parsing netlist: ${error}`, null, false);
+					}
+				}
+
+				async function sendMessage(event) {
+					try {
+						id++;
+						event.preventDefault();
+						const message = messageInput.value.trim();
+						if (message) {
+							if (apiUrlInput.value === '' || apiKeyInput.value === '') {
+								eda.sys_ToastMessage.showMessage(`请填写URL和Key`, 1);
+								return;
+							}
+							displayMessage(`${message}`, null, true);
+							messageInput.value = '';
+
+							const apiUrl = apiUrlInput.value;
+							const apiKey = apiKeyInput.value;
+
+							const response = await eda.sys_ClientUrl.request(
+								apiUrl,
+								'POST',
+								JSON.stringify({
+									model: 'moonshot-v1-32k',
+									messages: [{ role: 'user', content: message }],
+									temperature: 0.3,
+									stream: true,
+								}),
+								{
+									headers: {
+										'Content-Type': 'application/json',
+										'Authorization': `Bearer ${apiKey}`,
+									},
+								},
+							);
+							if (!response.ok) {
+								console.error('请求失败:', response.status, response.statusText);
+								eda.sys_ToastMessage.showMessage(`请检查URL和Key是否正确`, 0);
+								return;
+							}
+							const reader = response.body.getReader();
+							while (true) {
+								const { done, value } = await reader.read();
+								if (done) {
+									break;
+								} else {
+									const decoder = new TextDecoder();
+									const chunk = decoder.decode(value, { stream: true });
+									const lines = chunk.split('\n');
+									lines.forEach((line) => {
+										if (line.startsWith('data: ')) {
+											const data = line.substring(6);
+											if (data === '[DONE]') {
+											} else {
+												try {
+													const chunkJson = JSON.parse(data);
+													const content = chunkJson.choices[0].delta.content;
+													if (content) {
+														displayMessage(content, id, false); // 立即显示接收到的数据块
+													}
+												} catch (error) {
+													console.error('Error parsing chunk:', error);
+												}
+											}
+										}
+									});
+								}
+							}
+						}
+					} catch (error) {
+						console.error('Upload failed:', error);
+						eda.sys_ToastMessage.showMessage(`请检查外部交互是否开启`, 0);
+					}
+				}
+				async function sendGreeting() {
+					if (isSelectingComponent) {
+						greetButton.textContent = '点击元件';
+						isSelectingComponent = false;
+
+						eda.sch_Event.addMouseEventListener(
+							'1',
+							'selected',
+							async (eventType) => {
+								const selectedPrimitives = await eda.sch_SelectControl.getSelectedPrimitives();
+								if (selectedPrimitives.length > 0) {
+									const id = selectedPrimitives[0].id;
+									const primitiveComponent = await eda.sch_PrimitiveComponent.get(id);
+									if (primitiveComponent.length > 0) {
+										console.log(primitiveComponent[0].subPartName);
+										const newStr = primitiveComponent[0].subPartName.split('.');
+										newStr.pop();
+										const message = `请介绍 ${newStr.join('.')} 的功能及应用场景`;
+										messageInput.value = message;
+										sendMessage({ preventDefault: () => {} });
+									}
+								}
+								greetButton.textContent = '查询元件';
+								isSelectingComponent = true;
+							},
+							1,
+						);
+					}
+				}
+
+				async function similarGreeting() {
+					if (isSimilarComponent) {
+						similarButton.textContent = '点击元件';
+						isSimilarComponent = false;
+
+						eda.sch_Event.addMouseEventListener(
+							'1',
+							'selected',
+							async (eventType) => {
+								const selectedPrimitives = await eda.sch_SelectControl.getSelectedPrimitives();
+								if (selectedPrimitives.length > 0) {
+									const id = selectedPrimitives[0].id;
+									const primitiveComponent = await eda.sch_PrimitiveComponent.get(id);
+									if (primitiveComponent.length > 0) {
+										console.log(primitiveComponent[0].subPartName);
+										const newStr = primitiveComponent[0].subPartName.split('.');
+										newStr.pop();
+										const message = `请介绍 ${newStr.join('.')} 的相似物料`;
+										messageInput.value = message;
+										sendMessage({ preventDefault: () => {} });
+									}
+								}
+								similarButton.textContent = '相似器件';
+								isSimilarComponent = true;
+							},
+							1,
+						);
+					}
+				}
+
+				function displayMessage(message, id, user) {
+					message = message.replaceAll('\n', '<br />');
+
+					let messageDiv;
+					if (id) {
+						messageDiv = document.getElementById(id);
+						if (!messageDiv) {
+							messageDiv = document.createElement('div');
+							messageDiv.setAttribute('id', id);
+						}
+					} else {
+						messageDiv = document.createElement('div');
+					}
+					if (user) {
+						messageDiv.style.marginLeft = 'auto'; // AI消息靠左
+						messageDiv.className = 'user-message';
+					} else {
+						messageDiv.style.marginRight = 'auto'; // 用户消息靠右
+						messageDiv.className = 'ai-message';
+					}
+					messageDiv.innerHTML += message;
+
+					// 如果messageDiv不在DOM中，则添加到chatContainer
+					if (!messageDiv.parentNode) {
+						chatContainer.appendChild(messageDiv);
+					}
+
+					chatContainer.scrollTop = chatContainer.scrollHeight;
+				}
+
+				sendButton.addEventListener('click', sendMessage);
+				messageInput.addEventListener('keypress', (event) => {
+					if (event.key === 'Enter') {
+						sendMessage(event);
+					}
+				});
+
+				greetButton.addEventListener('click', sendGreeting);
+				similarButton.addEventListener('click', similarGreeting);
+			});
+		</script>
+	</body>
+</html>

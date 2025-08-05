@@ -1,0 +1,826 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<!-- 文件引用 -->
+		<!-- <link rel="stylesheet" href="style.css" /> -->
+		<link rel="stylesheet" href="/iframe/style.css" />
+		<title>Kimi AI助手</title>
+	</head>
+	<body>
+		<!-- 聊天窗口容器 -->
+		<div id="chat-container"></div>
+
+		<!-- 输入区域 -->
+		<div class="input-container">
+			<textarea id="message-input" placeholder="在这输入你的问题..."></textarea>
+			<div class="button-group">
+				<div class="function-buttons">
+					<button id="greet-button" class="button-style" title="选择需查询的元件">
+						<span>查询元件</span>
+					</button>
+					<button id="similar-button" class="button-style" title="选择需查询的元件">
+						<span>相似物料</span>
+					</button>
+					<button id="parse-netlist-button" class="button-style">
+						<span>分析网表</span>
+					</button>
+					<button id="upload-image-button" class="button-style" style="display: none" title="点击上传原理图或 PCB 的图片">
+						<span>分析电路</span>
+					</button>
+				</div>
+
+				<!-- 配置按钮组 -->
+				<div class="button-group-center">
+					<button id="config-button" class="button-style">
+						<svg viewBox="0 0 24 24">
+							<path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
+							<path
+								d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"
+							/>
+						</svg>
+					</button>
+				</div>
+
+				<button id="send-button">
+					<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
+						<path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+					</svg>
+				</button>
+			</div>
+		</div>
+
+		<!-- 配置面板 -->
+		<div class="config-panel">
+			<!-- 配置面板头部 -->
+			<div class="config-header">
+				<h3>API 设置</h3>
+				<!-- 关闭按钮 -->
+				<button class="close-btn">&times;</button>
+			</div>
+			<!-- 配置面板内容 -->
+			<div class="config-content">
+				<div class="input-group">
+					<label for="model-select">选择模型</label>
+					<select id="model-select" class="modern-input">
+						<option value="moonshot-v1-8k">moonshot-v1-8k</option>
+						<option value="moonshot-v1-32k">moonshot-v1-32k</option>
+						<option value="moonshot-v1-128k">moonshot-v1-128k</option>
+						<option value="moonshot-v1-8k-vision-preview">moonshot-v1-8k-vision-preview</option>
+						<option value="moonshot-v1-32k-vision-preview">moonshot-v1-32k-vision-preview</option>
+						<option value="moonshot-v1-128k-vision-preview">moonshot-v1-128k-vision-preview</option>
+					</select>
+				</div>
+
+				<div class="input-group">
+					<label for="api-url-input">接口地址</label>
+					<input type="text" id="api-url-input" class="modern-input" placeholder="请输入API URL" />
+				</div>
+				<!-- API密钥输入组 -->
+				<div class="input-group">
+					<label for="api-key-input">API密钥</label>
+					<input type="text" id="api-key-input" class="modern-input" placeholder="请输入API Key" />
+				</div>
+				<!-- 获取API凭证链接 -->
+				<a href="https://lceda001.feishu.cn/wiki/V9ScwIjk0iBc8fk9RhWcork9nGc?from=from_copylink" class="tutorial-link" target="_blank">
+					<span class="help-icon">?</span> 如何获取API凭证
+				</a>
+			</div>
+		</div>
+
+		<script>
+			document.addEventListener('DOMContentLoaded', async () => {
+				// 获取页面元素
+				const chatContainer = document.getElementById('chat-container');
+				const messageInput = document.getElementById('message-input');
+				const sendButton = document.getElementById('send-button');
+				const apiUrlInput = document.getElementById('api-url-input');
+				const apiKeyInput = document.getElementById('api-key-input');
+				const greetButton = document.getElementById('greet-button'); // 查询元件按钮
+				const similarButton = document.getElementById('similar-button'); // 相似器件按钮
+				const parseNetlistButton = document.getElementById('parse-netlist-button');
+				const modelSelect = document.getElementById('model-select');
+				const uploadImageButton = document.getElementById('upload-image-button');
+
+				// 读取本地存储的API配置
+				const storedKey = eda.sys_Storage.getExtensionUserConfig('Key');
+				const storedUrl = eda.sys_Storage.getExtensionUserConfig('Url');
+				const storedModel = eda.sys_Storage.getExtensionUserConfig('Model');
+
+				// 如果本地存储中有API配置，填充到输入框
+				if (storedUrl) {
+					apiUrlInput.value = storedUrl;
+				}
+				if (storedKey) {
+					apiKeyInput.value = storedKey;
+				}
+				if (storedModel) {
+					modelSelect.value = storedModel;
+				}
+
+				// 打开配置面板
+				document.getElementById('config-button').addEventListener('click', (e) => {
+					e.stopPropagation();
+					const panel = document.querySelector('.config-panel');
+					panel.classList.toggle('show');
+				});
+
+				// 关闭配置面板
+				document.querySelector('.close-btn').addEventListener('click', () => {
+					document.querySelector('.config-panel').classList.remove('show');
+				});
+
+				// 点击页面其他区域关闭配置面板
+				document.addEventListener('click', (e) => {
+					const panel = document.querySelector('.config-panel');
+					if (!panel.contains(e.target) && e.target.id !== 'config-button' && !e.target.closest('#config-button')) {
+						panel.classList.remove('show');
+					}
+				});
+
+				// 监听API URL输入变化并保存到本地存储
+				apiUrlInput.addEventListener('input', () => {
+					eda.sys_Storage.setExtensionUserConfig('Url', apiUrlInput.value);
+				});
+
+				// 监听API Key输入变化并保存到本地存储
+				apiKeyInput.addEventListener('input', () => {
+					eda.sys_Storage.setExtensionUserConfig('Key', apiKeyInput.value);
+				});
+
+				// 设置默认模型为视觉模型
+				// const defaultModel = 'moonshot-v1-128k-vision-preview';
+				// modelSelect.value = defaultModel;
+
+				// 监听模型选择变化
+				modelSelect.addEventListener('change', () => {
+					const selectedModel = modelSelect.value;
+
+					// 如果选中的模型是视觉模型，则显示上传图片按钮
+					const isVisionModel = selectedModel.includes('vision-preview');
+					uploadImageButton.style.display = isVisionModel ? 'block' : 'none';
+
+					eda.sys_Storage.setExtensionUserConfig('Model', selectedModel);
+				});
+
+				modelSelect.dispatchEvent(new Event('change'));
+
+				// 消息相关变量
+				let id = 0;
+				let reader; // 用于存储流式读取器
+				let isStreaming = false; // 是否正在流式传输
+
+				// 初始化消息存储
+				let messages = []; // 存储对话历史
+				const systemMessages = [
+					{
+						role: 'system',
+						content:
+							'你是一个专业的电路设计助手，具备深厚的电路设计知识和丰富的实践经验。你擅长回答与电路图、原理图设计、器件选择、电路调试、信号完整性分析、电源完整性分析、电磁兼容性（EMC）设计、电路板布局布线等相关问题。你的任务是为用户提供准确、详细且实用的建议，帮助用户解决电路设计中的各种问题。',
+						//'你是一个专业的电路设计助手，擅长回答与电路图、原理图设计、器件选择等相关问题。你的任务是为用户提供准确、详细且实用的建议，帮助用户解决电路设计中的问题。请确保你的回答符合以下要求：1. 提供清晰的电路设计指导。2. 解释器件选择的原则和建议。3. 帮助用户优化电路图和原理图设计。4. 回答应尽量简洁明了，避免不必要的复杂性。5. 如果用户的问题涉及具体器件或电路功能，请提供相关的技术细节和注意事项。',
+					},
+				];
+
+				const systemMessagesVision = [
+					{
+						role: 'system',
+						content:
+							'你是一个专业的电路设计助手，具备深厚的电路设计知识和丰富的实践经验。你擅长通过电路原理图图片或PCB电路图片回答与电路设计相关的问题。你的任务是为用户提供准确、详细且实用的建议，帮助用户解决电路设计中的问题。',
+					},
+				];
+
+				async function sendMessage(event) {
+					try {
+						event.preventDefault();
+						const message = messageInput.value.trim();
+
+						if (message) {
+							// 生成消息ID
+							id++;
+							// 添加用户消息到历史
+							messages.push({
+								role: 'user',
+								content: message,
+							});
+
+							// 显示用户消息
+							displayMessage(message, null, true);
+
+							// 如果API地址或密钥未填写，提示用户
+							if (apiUrlInput.value === '' || apiKeyInput.value === '') {
+								eda.sys_ToastMessage.showMessage(`请填写URL和Key`, 1);
+								return;
+							}
+
+							// 构造API请求数据
+							const apiUrl = apiUrlInput.value;
+							const apiKey = apiKeyInput.value;
+
+							// 限制上下文长度为最新20条消息
+							const limitedMessages = systemMessages.concat(messages.slice(-20));
+
+							// 打印传递给AI的上下文
+							console.log('Context sent to AI:', limitedMessages);
+
+							// 清空输入框
+							messageInput.value = '';
+
+							const response = await eda.sys_ClientUrl.request(
+								apiUrl,
+								'POST',
+								JSON.stringify({
+									model: modelSelect.value,
+									messages: limitedMessages, // 合并系统消息和对话历史
+									temperature: 0.3,
+									stream: true,
+								}),
+								{
+									headers: {
+										'Content-Type': 'application/json',
+										'Authorization': `Bearer ${apiKey}`,
+									},
+								},
+							);
+
+							if (!response.ok) {
+								console.error('请求失败:', response.status, response.statusText);
+								eda.sys_ToastMessage.showMessage(`请检查URL和Key是否正确`, 0);
+								return;
+							}
+
+							const reader = response.body.getReader();
+							isStreaming = true;
+
+							sendButton.innerHTML = `<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
+			                <path fill="currentColor" d="M6 6h12v12H6z" />
+			            </svg>`;
+							sendButton.removeEventListener('click', sendMessage);
+							sendButton.addEventListener('click', () => stopStreaming(reader, sendButton));
+
+							// 用于拼接流式传输的完整消息
+							let assistantMessage = '';
+
+							while (isStreaming) {
+								const { done, value } = await reader.read();
+								if (done || !isStreaming) break;
+
+								const decoder = new TextDecoder();
+								const chunk = decoder.decode(value, { stream: true });
+								const lines = chunk.split('\n');
+
+								lines.forEach((line) => {
+									if (line.startsWith('data: ')) {
+										const data = line.substring(6);
+										if (data === '[DONE]') return;
+
+										try {
+											const chunkJson = JSON.parse(data);
+											const content = chunkJson.choices[0].delta.content;
+											if (content) {
+												// 拼接流式传输的完整消息
+												assistantMessage += content;
+
+												// 逐步显示AI的回复
+												displayMessage(content, id, false);
+											}
+										} catch (error) {
+											console.error('Error parsing chunk:', error);
+										}
+									}
+								});
+							}
+
+							// 将拼接后的完整消息添加到对话历史
+							if (assistantMessage) {
+								messages.push({
+									role: 'assistant',
+									content: assistantMessage,
+								});
+							}
+
+							// 恢复按钮状态
+							sendButton.innerHTML = `<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
+			                <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+			            </svg>`;
+							sendButton.removeEventListener('click', () => stopStreaming(reader, sendButton));
+							sendButton.addEventListener('click', sendMessage);
+							isStreaming = false;
+						}
+					} catch (error) {
+						console.error('Upload failed:', error);
+						eda.sys_ToastMessage.showMessage(`请检查外部交互是否开启`, 0);
+					}
+				}
+
+				// 停止流式传输函数
+				function stopStreaming(reader, button) {
+					if (reader) {
+						reader.cancel();
+					}
+					button.innerHTML = `<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
+			            <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+			        </svg>`;
+					button.removeEventListener('click', stopStreaming);
+					button.addEventListener('click', sendMessage);
+				}
+
+				// 显示消息函数
+				function displayMessage(message, id, user) {
+					message = message.replaceAll('\n', '<br />');
+
+					let messageDiv;
+					if (id) {
+						messageDiv = document.getElementById(id);
+						if (!messageDiv) {
+							messageDiv = document.createElement('div');
+							messageDiv.setAttribute('id', id);
+						}
+					} else {
+						messageDiv = document.createElement('div');
+					}
+
+					if (user) {
+						messageDiv.style.marginLeft = 'auto';
+						messageDiv.className = 'user-message';
+					} else {
+						messageDiv.style.marginRight = 'auto';
+						messageDiv.className = 'ai-message';
+					}
+					messageDiv.innerHTML += message;
+
+					if (!messageDiv.parentNode) {
+						chatContainer.appendChild(messageDiv);
+					}
+
+					chatContainer.scrollTop = chatContainer.scrollHeight;
+				}
+
+				/**
+				 * 发送元件查询请求
+				 */
+				async function sendGreeting() {
+					// 监听元件选择事件
+					eda.sys_ToastMessage.showMessage(`请左键单击原理图中需查询的元件`, 3);
+					eda.sch_Event.addMouseEventListener(
+						'1',
+						'selected',
+						async (eventType) => {
+							const selectedPrimitives = await eda.sch_SelectControl.getSelectedPrimitives();
+							if (selectedPrimitives.length > 0) {
+								const id = selectedPrimitives[0].id;
+								const primitiveComponent = await eda.sch_PrimitiveComponent.get(id);
+								if (primitiveComponent.length > 0) {
+									// 获取元件名称
+									const newStr = primitiveComponent[0].subPartName.split('.');
+									newStr.pop();
+									const message = `请介绍 ${newStr.join('.')} 的功能及应用场景`;
+									messageInput.value = message;
+									sendMessage({ preventDefault: () => {} });
+								}
+							}
+						},
+						1,
+					);
+				}
+
+				/**
+				 * 发送相似物料查询请求
+				 */
+				async function similarGreeting() {
+					// 监听元件选择事件
+					eda.sys_ToastMessage.showMessage(`请左键单击原理图中需查询的元件`, 3);
+					eda.sch_Event.addMouseEventListener(
+						'1',
+						'selected',
+						async (eventType) => {
+							const selectedPrimitives = await eda.sch_SelectControl.getSelectedPrimitives();
+							if (selectedPrimitives.length > 0) {
+								const id = selectedPrimitives[0].id;
+								const primitiveComponent = await eda.sch_PrimitiveComponent.get(id);
+								if (primitiveComponent.length > 0) {
+									// 获取元件名称
+									const newStr = primitiveComponent[0].subPartName.split('.');
+									newStr.pop();
+									const message = `请介绍 ${newStr.join('.')} 的相似物料`;
+									messageInput.value = message;
+									sendMessage({ preventDefault: () => {} });
+								}
+							}
+						},
+						1,
+					);
+				}
+
+				/**
+				 * 解析网表
+				 */
+				/**
+				 * 解析网表并发送给 AI
+				 */
+				async function parseNetlist() {
+					const netlistString = await eda.sch_Netlist.getNetlist('JLCEDA');
+
+					const messagePrompt = '请分析以下电路原理图的网表内容';
+					// 构造提示词，让 AI 理解网表内容
+					const systemMessage = {
+						role: 'system',
+						content:
+							'您接收到的是一个电路原理图的网表内容。请仔细分析后告诉我整体电路的功能、特点以及可能存在的问题。我会根据您的回答，进一步提出相关问题。',
+					};
+
+					// 将网表内容和提示词添加到对话历史中
+					messages.push(systemMessage);
+					messages.push({
+						role: 'user',
+						content: `以下是电路原理图的网表内容：\n\`\`\`\n${netlistString}\n\`\`\`\n请分析并回复。`,
+					});
+
+					messageInput.value = messagePrompt;
+					sendMessage({ preventDefault: () => {} });
+				}
+
+				/////////////////视觉模型/////////////////////
+				// 文件上传元素
+				const fileInput = document.createElement('input');
+				fileInput.type = 'file';
+				fileInput.accept = 'image/*';
+				document.body.appendChild(fileInput);
+				fileInput.style.display = 'none';
+
+				// 图片上传按钮事件
+				document.getElementById('upload-image-button').addEventListener('click', () => {
+					fileInput.click();
+				});
+
+				fileInput.addEventListener('change', async () => {
+					if (fileInput.files.length > 0) {
+						const file = fileInput.files[0];
+						const reader = new FileReader();
+
+						reader.onload = async (e) => {
+							const imageBase64 = e.target.result;
+							const imageUrl = `data:image/${file.type};base64,${imageBase64.split(',')[1]}`;
+
+							// 构造视觉模型请求
+							const message = '\n请根据图片分析电路';
+							const visionMessage = {
+								role: 'user',
+								content: [
+									{
+										type: 'image_url',
+										image_url: { url: imageUrl },
+									},
+									{
+										type: 'text',
+										text: message,
+									},
+								],
+							};
+
+							// 将视觉模型请求发送到对话历史
+							messages.push(visionMessage);
+
+							// 显示缩略图
+							const thumbnail = document.createElement('img');
+							thumbnail.src = imageUrl;
+							thumbnail.style.maxWidth = '200px';
+							thumbnail.style.height = 'auto';
+							thumbnail.style.margin = '10px';
+							thumbnail.style.border = '1px solid #ddd';
+							thumbnail.className = 'user-message';
+
+							// 显示缩略图和消息
+							const messageDiv = document.createElement('div');
+							messageDiv.style.marginLeft = 'auto';
+							messageDiv.className = 'user-message';
+							messageDiv.appendChild(thumbnail);
+							messageDiv.innerHTML += message.replace('\n', '<br />');
+
+							if (!messageDiv.parentNode) {
+								chatContainer.appendChild(messageDiv);
+							}
+
+							chatContainer.scrollTop = chatContainer.scrollHeight;
+
+							// 如果API地址或密钥未填写，提示用户
+							if (apiUrlInput.value === '' || apiKeyInput.value === '') {
+								eda.sys_ToastMessage.showMessage(`请填写URL和Key`, 1);
+								return;
+							}
+
+							// 构造API请求数据
+							const apiUrl = apiUrlInput.value;
+							const apiKey = apiKeyInput.value;
+
+							// 限制上下文长度为最新20条消息
+							const limitedMessages = systemMessagesVision.concat(messages.slice(-20));
+
+							// 打印传递给AI的上下文
+							console.log('Context sent to AI:', limitedMessages);
+
+							// 清空输入框
+							messageInput.value = '';
+
+							const response = await eda.sys_ClientUrl.request(
+								apiUrl,
+								'POST',
+								JSON.stringify({
+									model: modelSelect.value,
+									messages: limitedMessages, // 合并系统消息和对话历史
+									temperature: 0.3,
+									stream: true,
+								}),
+								{
+									headers: {
+										'Content-Type': 'application/json',
+										'Authorization': `Bearer ${apiKey}`,
+									},
+								},
+							);
+
+							if (!response.ok) {
+								console.error('请求失败:', response.status, response.statusText);
+								eda.sys_ToastMessage.showMessage(`请检查URL和Key是否正确`, 0);
+								return;
+							}
+
+							const reader = response.body.getReader();
+							isStreaming = true;
+
+							// 生成新的消息ID
+							id++;
+
+							sendButton.innerHTML = `<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
+            <path fill="currentColor" d="M6 6h12v12H6z" />
+            </svg>`;
+							sendButton.removeEventListener('click', sendMessage);
+							sendButton.addEventListener('click', () => stopStreaming(reader, sendButton));
+
+							// 用于拼接流式传输的完整消息
+							let assistantMessage = '';
+
+							while (isStreaming) {
+								const { done, value } = await reader.read();
+								if (done || !isStreaming) break;
+
+								const decoder = new TextDecoder();
+								const chunk = decoder.decode(value, { stream: true });
+								const lines = chunk.split('\n');
+
+								lines.forEach((line) => {
+									if (line.startsWith('data: ')) {
+										const data = line.substring(6);
+										if (data === '[DONE]') return;
+
+										try {
+											const chunkJson = JSON.parse(data);
+											const content = chunkJson.choices[0].delta.content;
+											if (content) {
+												// 拼接流式传输的完整消息
+												assistantMessage += content;
+
+												// 逐步显示AI的回复
+												displayMessage(content, id, false);
+											}
+										} catch (error) {
+											console.error('Error parsing chunk:', error);
+										}
+									}
+								});
+							}
+
+							// 将拼接后的完整消息添加到对话历史
+							if (assistantMessage) {
+								messages.push({
+									role: 'assistant',
+									content: assistantMessage,
+								});
+								// 将完整消息显示在聊天窗口中
+								displayMessage(assistantMessage, id, false);
+							}
+
+							// 恢复按钮状态
+							sendButton.innerHTML = `<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
+            <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+            </svg>`;
+							sendButton.removeEventListener('click', () => stopStreaming(reader, sendButton));
+							sendButton.addEventListener('click', sendMessage);
+							isStreaming = false;
+						};
+
+						// 将图片转换为 Base64 格式
+						reader.readAsDataURL(file);
+					}
+				});
+				messageInput.addEventListener('paste', async (e) => {
+					e.preventDefault(); // 阻止默认粘贴行为
+
+					try {
+						// 获取剪贴板中的数据
+						const items = e.clipboardData.items;
+						for (const item of items) {
+							if (item.type.indexOf('image') !== -1) {
+								// 检查粘贴的内容是否为图片
+								const file = item.getAsFile(); // 将图片转换为文件对象
+
+								if (file) {
+									const reader = new FileReader();
+									reader.onload = async (event) => {
+										const imageBase64 = event.target.result;
+										const imageUrl = `data:${file.type};base64,${imageBase64.split(',')[1]}`;
+
+										// 构造视觉模型请求
+										const message = '\n请根据图片分析电路';
+										const visionMessage = {
+											role: 'user',
+											content: [
+												{
+													type: 'image_url',
+													image_url: { url: imageUrl },
+												},
+												{
+													type: 'text',
+													text: message,
+												},
+											],
+										};
+
+										// 将视觉模型请求发送到对话历史
+										messages.push(visionMessage);
+
+										// 显示缩略图
+										const thumbnail = document.createElement('img');
+										thumbnail.src = imageUrl;
+										thumbnail.style.maxWidth = '200px';
+										thumbnail.style.height = 'auto';
+										thumbnail.style.margin = '10px';
+										thumbnail.style.border = '1px solid #ddd';
+										thumbnail.className = 'user-message';
+
+										// 显示缩略图和消息
+										const messageDiv = document.createElement('div');
+										messageDiv.style.marginLeft = 'auto';
+										messageDiv.className = 'user-message';
+										messageDiv.appendChild(thumbnail);
+										messageDiv.innerHTML += message.replace('\n', '<br />');
+
+										if (!messageDiv.parentNode) {
+											chatContainer.appendChild(messageDiv);
+										}
+
+										chatContainer.scrollTop = chatContainer.scrollHeight;
+
+										// 如果API地址或密钥未填写，提示用户
+										if (apiUrlInput.value === '' || apiKeyInput.value === '') {
+											eda.sys_ToastMessage.showMessage(`请填写URL和Key`, 1);
+											return;
+										}
+
+										// 构造API请求数据
+										const apiUrl = apiUrlInput.value;
+										const apiKey = apiKeyInput.value;
+
+										// 限制上下文长度为最新20条消息
+										const limitedMessages = systemMessagesVision.concat(messages.slice(-20));
+
+										// 打印传递给AI的上下文
+										console.log('Context sent to AI:', limitedMessages);
+
+										// 清空输入框
+										messageInput.value = '';
+
+										const response = await eda.sys_ClientUrl.request(
+											apiUrl,
+											'POST',
+											JSON.stringify({
+												model: modelSelect.value,
+												messages: limitedMessages, // 合并系统消息和对话历史
+												temperature: 0.3,
+												stream: true,
+											}),
+											{
+												headers: {
+													'Content-Type': 'application/json',
+													'Authorization': `Bearer ${apiKey}`,
+												},
+											},
+										);
+
+										if (!response.ok) {
+											console.error('请求失败:', response.status, response.statusText);
+											eda.sys_ToastMessage.showMessage(`请检查URL和Key是否正确`, 0);
+											return;
+										}
+
+										const reader = response.body.getReader();
+										isStreaming = true;
+
+										// 生成新的消息ID
+										id++;
+
+										sendButton.innerHTML = `<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
+                                <path fill="currentColor" d="M6 6h12v12H6z" />
+                                </svg>`;
+										sendButton.removeEventListener('click', sendMessage);
+										sendButton.addEventListener('click', () => stopStreaming(reader, sendButton));
+
+										// 用于拼接流式传输的完整消息
+										let assistantMessage = '';
+
+										while (isStreaming) {
+											const { done, value } = await reader.read();
+											if (done || !isStreaming) break;
+
+											const decoder = new TextDecoder();
+											const chunk = decoder.decode(value, { stream: true });
+											const lines = chunk.split('\n');
+
+											lines.forEach((line) => {
+												if (line.startsWith('data: ')) {
+													const data = line.substring(6);
+													if (data === '[DONE]') return;
+
+													try {
+														const chunkJson = JSON.parse(data);
+														const content = chunkJson.choices[0].delta.content;
+														if (content) {
+															// 拼接流式传输的完整消息
+															assistantMessage += content;
+
+															// 逐步显示AI的回复
+															displayMessage(content, id, false);
+														}
+													} catch (error) {
+														console.error('Error parsing chunk:', error);
+													}
+												}
+											});
+										}
+
+										// 将拼接后的完整消息添加到对话历史
+										if (assistantMessage) {
+											messages.push({
+												role: 'assistant',
+												content: assistantMessage,
+											});
+											// 将完整消息显示在聊天窗口中
+											displayMessage(assistantMessage, id, false);
+										}
+
+										// 恢复按钮状态
+										sendButton.innerHTML = `<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
+                                <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                                </svg>`;
+										sendButton.removeEventListener('click', () => stopStreaming(reader, sendButton));
+										sendButton.addEventListener('click', sendMessage);
+										isStreaming = false;
+									};
+
+									// 将图片转换为 Base64 格式
+									reader.readAsDataURL(file);
+								}
+							}
+						}
+					} catch (error) {
+						console.error('粘贴图片失败:', error);
+					}
+				});
+
+				// 绑定发送按钮点击事件
+				sendButton.addEventListener('click', sendMessage);
+
+				// 绑定回车键发送消息事件
+				messageInput.addEventListener('keypress', (event) => {
+					if (event.key === 'Enter') {
+						sendMessage(event);
+					}
+				});
+
+				// 绑定查询元件按钮点击事件
+				greetButton.addEventListener('click', async () => {
+					if (isStreaming) {
+						stopStreaming();
+					}
+					await sendGreeting();
+				});
+
+				// 绑定相似器件按钮点击事件
+				similarButton.addEventListener('click', async () => {
+					if (isStreaming) {
+						stopStreaming();
+					}
+					await similarGreeting();
+				});
+
+				// 绑定检查引脚按钮点击事件
+				parseNetlistButton.addEventListener('click', async () => {
+					if (isStreaming) {
+						stopStreaming();
+					}
+					await parseNetlist();
+				});
+			});
+		</script>
+	</body>
+</html>

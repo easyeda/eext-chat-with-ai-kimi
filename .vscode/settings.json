@@ -1,0 +1,52 @@
+{
+	"editor.formatOnSave": true,
+	"editor.defaultFormatter": "esbenp.prettier-vscode",
+	"eslint.validate": ["javascript", "typescript"],
+	"editor.codeActionsOnSave": {
+		"source.fixAll.eslint": "explicit"
+	},
+	"prettier.requireConfig": true,
+	"files.associations": {
+		"*.json": "jsonc"
+	},
+	"cSpell.words": [
+		"easyeda",
+		"edaignore",
+		"EDMT",
+		"eext",
+		"ELIB",
+		"EPCB",
+		"EPNL",
+		"ESCH",
+		"eslintcache",
+		"ESYS",
+		"Gitee",
+		"IDMT",
+		"iframe",
+		"iife",
+		"ILIB",
+		"IPCB",
+		"IPNL",
+		"ISCH",
+		"ISYS",
+		"jlceda",
+		"kimi",
+		"lceda",
+		"Netlist",
+		"nodebuffer",
+		"npmrc",
+		"OSHW",
+		"outdir",
+		"Songti",
+		"SZJLC",
+		"TDMT",
+		"TLIB",
+		"TPCB",
+		"TPNL",
+		"trivago",
+		"TSCH",
+		"tsdoc",
+		"TSYS"
+	],
+	"liveServer.settings.port": 5501
+}
