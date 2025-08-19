@@ -19,8 +19,8 @@
 		"logo": "./images/logo.png",
 		"banner": "./images/banner.png"
 	},
-	"homepage": "https://pro.lceda.cn",
-	"bugs": "https://lceda.cn/page/feedback?originPage=other",
+	"homepage": "https://github.com/easyeda/eext-chat-with-ai-kimi",
+	"bugs": "https://github.com/easyeda/eext-chat-with-ai-kimi/issues",
 	"activationEvents": {},
 	"entry": "./dist/index",
 	"dependentExtensions": {},
