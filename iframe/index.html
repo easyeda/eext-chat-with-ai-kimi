@@ -3,8 +3,6 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<!-- 文件引用 -->
-		<!-- <link rel="stylesheet" href="style.css" /> -->
 		<link rel="stylesheet" href="/iframe/style.css" />
 		<title>Kimi AI助手</title>
 	</head>
@@ -64,13 +62,14 @@
 				<div class="input-group">
 					<label for="model-select">选择模型</label>
 					<select id="model-select" class="modern-input">
+						<option value="kimi-k2-0905-preview">kimi-k2-0905-preview</option>
+						<option value="kimi-k2-turbo-preview">kimi-k2-turbo-preview</option>
 						<option value="moonshot-v1-8k">moonshot-v1-8k</option>
 						<option value="moonshot-v1-32k">moonshot-v1-32k</option>
 						<option value="moonshot-v1-128k">moonshot-v1-128k</option>
 						<option value="moonshot-v1-8k-vision-preview">moonshot-v1-8k-vision-preview</option>
 						<option value="moonshot-v1-32k-vision-preview">moonshot-v1-32k-vision-preview</option>
 						<option value="moonshot-v1-128k-vision-preview">moonshot-v1-128k-vision-preview</option>
-						<option value="kimi-k2-0711-preview">kimi-k2-0711-preview</option>
 					</select>
 				</div>
 
@@ -83,13 +82,6 @@
 					<label for="api-key-input">API密钥</label>
 					<input type="text" id="api-key-input" class="modern-input" placeholder="请输入API Key" />
 				</div>
-				<!-- 联网搜索开关 -->
-				<div class="input-group">
-					<label for="web-search-toggle">
-						<input type="checkbox" id="web-search-toggle" class="modern-checkbox" />
-						<span title="开启后AI可以联网搜索最新信息">启用联网搜索</span>
-					</label>
-				</div>
 				<!-- 获取API凭证链接 -->
 				<a href="https://lceda001.feishu.cn/wiki/V9ScwIjk0iBc8fk9RhWcork9nGc?from=from_copylink" class="tutorial-link" target="_blank">
 					<span class="help-icon">?</span> 如何获取API凭证
@@ -99,26 +91,24 @@
 
 		<script>
 			document.addEventListener('DOMContentLoaded', async () => {
-					// 获取页面元素
-					const chatContainer = document.getElementById('chat-container');
-					const messageInput = document.getElementById('message-input');
-					const sendButton = document.getElementById('send-button');
-					const apiUrlInput = document.getElementById('api-url-input');
-					const apiKeyInput = document.getElementById('api-key-input');
-					const greetButton = document.getElementById('greet-button'); // 查询元件按钮
-					const similarButton = document.getElementById('similar-button'); // 相似器件按钮
-					const parseNetlistButton = document.getElementById('parse-netlist-button');
-					const modelSelect = document.getElementById('model-select');
-					const uploadImageButton = document.getElementById('upload-image-button');
-					const webSearchToggle = document.getElementById('web-search-toggle');
+				// 获取页面元素
+				const chatContainer = document.getElementById('chat-container');
+				const messageInput = document.getElementById('message-input');
+				const sendButton = document.getElementById('send-button');
+				const apiUrlInput = document.getElementById('api-url-input');
+				const apiKeyInput = document.getElementById('api-key-input');
+				const greetButton = document.getElementById('greet-button'); // 查询元件按钮
+				const similarButton = document.getElementById('similar-button'); // 相似器件按钮
+				const parseNetlistButton = document.getElementById('parse-netlist-button');
+				const modelSelect = document.getElementById('model-select');
+				const uploadImageButton = document.getElementById('upload-image-button');
 
 				// 读取本地存储的API配置
-			const storedKey = eda.sys_Storage.getExtensionUserConfig('Key');
-			const storedUrl = eda.sys_Storage.getExtensionUserConfig('Url');
-			const storedModel = eda.sys_Storage.getExtensionUserConfig('Model');
-			const storedWebSearchValue = eda.sys_Storage.getExtensionUserConfig('WebSearch');
+				const storedKey = eda.sys_Storage.getExtensionUserConfig('Key');
+				const storedUrl = eda.sys_Storage.getExtensionUserConfig('Url');
+				const storedModel = eda.sys_Storage.getExtensionUserConfig('Model');
 
-			// 如果本地存储中有API配置，填充到输入框
+				// 如果本地存储中有API配置，填充到输入框
 				if (storedUrl) {
 					apiUrlInput.value = storedUrl;
 				}
@@ -127,9 +117,6 @@
 				}
 				if (storedModel) {
 					modelSelect.value = storedModel;
-				}
-				if (storedWebSearchValue !== null) {
-					webSearchToggle.checked = storedWebSearchValue === 'true';
 				}
 
 				// 打开配置面板
@@ -162,30 +149,32 @@
 					eda.sys_Storage.setExtensionUserConfig('Key', apiKeyInput.value);
 				});
 
-				// 设置默认模型为视觉模型
-				// const defaultModel = 'moonshot-v1-128k-vision-preview';
-				// modelSelect.value = defaultModel;
+				// 设置默认模型为 Kimi 文本模型（支持网表分析）
+				if (!storedModel) {
+					const defaultModel = 'kimi-k2-0905-preview';
+					modelSelect.value = defaultModel;
+					eda.sys_Storage.setExtensionUserConfig('Model', defaultModel);
+				}
 
 				// 监听模型选择变化
-					modelSelect.addEventListener('change', () => {
-						const selectedModel = modelSelect.value;
+				modelSelect.addEventListener('change', () => {
+					const selectedModel = modelSelect.value;
 
-						// 如果选中的模型是视觉模型，则显示上传图片按钮
-						const isVisionModel = selectedModel.includes('vision-preview');
-						uploadImageButton.style.display = isVisionModel ? 'block' : 'none';
+					// 如果选中的模型是视觉模型，则显示上传图片按钮
+					const isVisionModel = selectedModel.includes('vision-preview');
+					uploadImageButton.style.display = isVisionModel ? 'block' : 'none';
 
-						// 检查是否支持网表分析功能（只有32k和128k模型支持）
-						const supportsNetlistAnalysis = selectedModel.includes('32k') || selectedModel.includes('128k') || selectedModel === 'kimi-k2-0711-preview';
-						parseNetlistButton.style.display = supportsNetlistAnalysis ? 'block' : 'none';
-						parseNetlistButton.title = supportsNetlistAnalysis ? '分析网表' : '网表分析功能仅在32k、128k和kimi-k2-0711-preview模型中可用';
+					// 检查是否支持网表分析功能
+					const supportsNetlistAnalysis =
+						selectedModel.includes('32k') ||
+						selectedModel.includes('128k') ||
+						selectedModel === 'kimi-k2-0905-preview' ||
+						selectedModel === 'kimi-k2-turbo-preview';
+					parseNetlistButton.style.display = supportsNetlistAnalysis ? 'block' : 'none';
+					parseNetlistButton.title = supportsNetlistAnalysis ? '分析网表' : '网表分析功能仅在32k和128k模型中可用';
 
-						eda.sys_Storage.setExtensionUserConfig('Model', selectedModel);
-					});
-
-					// 监听联网搜索开关变化
-					webSearchToggle.addEventListener('change', () => {
-						eda.sys_Storage.setExtensionUserConfig('WebSearch', webSearchToggle.checked.toString());
-					});
+					eda.sys_Storage.setExtensionUserConfig('Model', selectedModel);
+				});
 
 				modelSelect.dispatchEvent(new Event('change'));
 
@@ -240,115 +229,41 @@
 							const apiUrl = apiUrlInput.value;
 							const apiKey = apiKeyInput.value;
 
-							// 检查是否启用联网搜索
-							const enableWebSearch = webSearchToggle.checked;
-
 							// 限制上下文长度为最新20条消息
 							const limitedMessages = systemMessages.concat(messages.slice(-20));
 
+							// 打印传递给AI的上下文
+							console.log('Context sent to AI:', limitedMessages);
+
 							// 清空输入框
-								messageInput.value = '';
+							messageInput.value = '';
 
-								// 构造请求体
-								const requestBody = {
+							const response = await eda.sys_ClientUrl.request(
+								apiUrl,
+								'POST',
+								JSON.stringify({
 									model: modelSelect.value,
-									messages: limitedMessages,
+									messages: limitedMessages, // 合并系统消息和对话历史
 									temperature: 0.3,
 									stream: true,
-								};
-
-								// 如果启用联网搜索，添加tools参数
-								if (enableWebSearch) {
-									requestBody.tools = [
-										{
-											type: 'function',
-											function: {
-												name: 'get_web_search_results',
-											},
-										},
-									];
-								}
-
-								// 打印调试信息
-								console.log('Context sent to AI:', limitedMessages);
-								console.log('Web search enabled:', enableWebSearch);
-								console.log('完整请求体:', JSON.stringify(requestBody, null, 2));
-								console.log('正在发送请求到:', apiUrl);
-								console.log('使用的模型:', modelSelect.value);
-								
-								// 检查模型是否支持web search
-								const model = modelSelect.value;
-								if (enableWebSearch && !model.includes('kimi')) {
-									console.warn('当前模型可能不支持web search，建议使用kimi系列模型');
-									eda.sys_ToastMessage.showMessage(`当前模型 ${model} 可能不支持联网搜索，建议切换至kimi系列模型`, 0);
-								}
-								
-								// 构建最终请求体
-								const finalRequestBody = {
-									model: model,
-									messages: limitedMessages,
-									temperature: 0.3,
-									stream: true,
-								};
-								
-								// 只有在启用web search时才添加tools
-								if (enableWebSearch) {
-									finalRequestBody.tools = [
-										{
-											type: 'function',
-											function: {
-												name: 'get_web_search_results',
-											},
-										},
-									];
-									console.log('已添加web search工具');
-								}
-								
-								console.log('最终请求体:', JSON.stringify(finalRequestBody, null, 2));
-						console.log('请求头:', {
-							'Content-Type': 'application/json',
-							'Authorization': `Bearer ${apiKey.substring(0, 8)}...`
-						});
-						
-						// 检查API URL是否正确
-						if (!apiUrl.includes('moonshot') && !apiUrl.includes('openai')) {
-							console.warn('API URL可能不是Moonshot官方地址，请确认是否为: https://api.moonshot.cn/v1/chat/completions');
-						}
-						
-						const response = await eda.sys_ClientUrl.request(
-							apiUrl,
-							'POST',
-							JSON.stringify(finalRequestBody),
-							{
-								headers: {
-									'Content-Type': 'application/json',
-									'Authorization': `Bearer ${apiKey}`,
-							},
-						},
-						);
-								
-									console.log('响应状态:', response.status);
-								console.log('响应头:', response.headers);
+								}),
+								{
+									headers: {
+										'Content-Type': 'application/json',
+										'Authorization': `Bearer ${apiKey}`,
+									},
+								},
+							);
 
 							if (!response.ok) {
-									console.error('请求失败:', response.status, response.statusText);
-									const errorText = await response.text();
-									console.error('错误详情:', errorText);
-									if (response.status === 429) {
-										eda.sys_ToastMessage.showMessage(`请求过多，超出接口额度限制`, 0);
-									} else if (response.status === 413) {
-										eda.sys_ToastMessage.showMessage(`图片大小或Tokens数量超出模型上下文窗口限制，请减小图片尺寸或减少对话内容`, 0);
-									} else if (response.status === 400) {
-										if (errorText.includes('context_length_exceeded') || errorText.includes('maximum context length')) {
-											eda.sys_ToastMessage.showMessage(`对话内容或图片过大，超出模型最大上下文长度限制，请清理部分对话或减小图片尺寸`, 0);
-										} else {
-											eda.sys_ToastMessage.showMessage(`请求参数错误: ${errorText}`, 0);
-										}
-									} else {
-										eda.sys_ToastMessage.showMessage(`请检查URL和Key是否正确 (${response.status})`, 0);
-									}
-									return;
+								console.error('请求失败:', response.status, response.statusText);
+								if (response.status === 429) {
+									eda.sys_ToastMessage.showMessage(`请求过多，超出接口额度限制`, 0);
+								} else {
+									eda.sys_ToastMessage.showMessage(`请检查URL和Key是否正确`, 0);
 								}
+								return;
+							}
 
 							const reader = response.body.getReader();
 							isStreaming = true;
@@ -400,26 +315,17 @@
 								});
 							}
 
-						// 恢复按钮状态
-						sendButton.innerHTML = `<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
-				            <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-				        </svg>`;
-						sendButton.removeEventListener('click', () => stopStreaming(reader, sendButton));
-						sendButton.addEventListener('click', sendMessage);
-						isStreaming = false;
-					} catch (error) {
-						console.error('请求失败:', error);
-						eda.sys_ToastMessage.showMessage(`请求失败: ${error.message}`, 0);
-						
-						// 恢复按钮状态
-						sendButton.innerHTML = `<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
-				            <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-				        </svg>`;
-						if (isStreaming) {
+							// 恢复按钮状态
+							sendButton.innerHTML = `<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
+			                <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+			            </svg>`;
 							sendButton.removeEventListener('click', () => stopStreaming(reader, sendButton));
 							sendButton.addEventListener('click', sendMessage);
 							isStreaming = false;
 						}
+					} catch (error) {
+						console.error('Upload failed:', error);
+						eda.sys_ToastMessage.showMessage(`请检查外部交互是否开启`, 0);
 					}
 				}
 
@@ -531,25 +437,29 @@
 				async function parseNetlist() {
 					// 检查当前模型是否支持网表分析
 					const selectedModel = modelSelect.value;
-					const supportsNetlistAnalysis = selectedModel.includes('32k') || selectedModel.includes('128k');
-					
+					const supportsNetlistAnalysis =
+						selectedModel.includes('32k') ||
+						selectedModel.includes('128k') ||
+						selectedModel === 'kimi-k2-0905-preview' ||
+						selectedModel === 'kimi-k2-turbo-preview';
+
 					if (!supportsNetlistAnalysis) {
-						eda.sys_ToastMessage.showMessage(`网表分析功能仅在32k和128k模型中可用，请切换模型`, 1);
+						eda.sys_ToastMessage.showMessage(`当前模型不支持网表分析，请切换到支持的模型`, 1);
 						return;
 					}
 
 					const netlistString = await eda.sch_Netlist.getNetlist('JLCEDA');
-					
+
 					// 解析网表JSON并精简关键信息
 					let simplifiedNetlist = '';
 					try {
 						const netlistData = JSON.parse(netlistString);
 						console.log('原始网表数据:', netlistData);
-						
+
 						// 精简网表信息，只保留关键信息
 						const components = [];
 						const connections = [];
-						
+
 						for (const [componentId, component] of Object.entries(netlistData)) {
 							if (component.props && component.pins) {
 								// 提取关键器件信息
@@ -558,40 +468,40 @@
 									name: component.props['Manufacturer Part'] || component.props.DeviceName || component.props.Name,
 									value: component.props.Value,
 									description: component.props.Description,
-									pins: component.pins
+									pins: component.pins,
 								};
-								
+
 								// 过滤掉空值
-								Object.keys(componentInfo).forEach(key => {
+								Object.keys(componentInfo).forEach((key) => {
 									if (!componentInfo[key] || componentInfo[key] === '') {
 										delete componentInfo[key];
 									}
 								});
-								
+
 								components.push(componentInfo);
-								
+
 								// 收集连接信息
 								for (const [pinNum, netName] of Object.entries(component.pins)) {
 									if (netName && netName !== '') {
 										connections.push({
 											component: componentInfo.designator,
 											pin: pinNum,
-											net: netName
+											net: netName,
 										});
 									}
 								}
 							}
 						}
-						
+
 						// 构建精简的网表描述
-						simplifiedNetlist = `器件列表:\n${components.map(comp => 
-							`${comp.designator}: ${comp.name || ''}${comp.value ? ` (${comp.value})` : ''}${comp.description ? ` - ${comp.description.substring(0, 50)}...` : ''}`
-						).join('\n')}\n\n连接关系:\n${connections.map(conn => 
-							`${conn.component}.${conn.pin} -> ${conn.net}`
-						).join('\n')}`;
-						
+						simplifiedNetlist = `器件列表:\n${components
+							.map(
+								(comp) =>
+									`${comp.designator}: ${comp.name || ''}${comp.value ? ` (${comp.value})` : ''}${comp.description ? ` - ${comp.description.substring(0, 50)}...` : ''}`,
+							)
+							.join('\n')}\n\n连接关系:\n${connections.map((conn) => `${conn.component}.${conn.pin} -> ${conn.net}`).join('\n')}`;
+
 						console.log('精简后的网表信息:', simplifiedNetlist);
-						
 					} catch (error) {
 						console.error('网表解析错误:', error);
 						// 如果解析失败，使用原始字符串的前1000个字符
@@ -700,76 +610,34 @@
 							// 清空输入框
 							messageInput.value = '';
 
-							// 构造请求体
-								const requestBody = {
+							const response = await eda.sys_ClientUrl.request(
+								apiUrl,
+								'POST',
+								JSON.stringify({
 									model: modelSelect.value,
-									messages: limitedMessages,
+									messages: limitedMessages, // 合并系统消息和对话历史
 									temperature: 0.3,
 									stream: true,
-								};
-
-								// 如果启用联网搜索，添加tools参数
-								if (enableWebSearch) {
-									requestBody.tools = [
-										{
-											type: 'builtin_function',
-											function: {
-												name: '$web_search',
-											},
-										},
-									];
-								}
-
-								console.log('图片处理请求头:', {
-									'Content-Type': 'application/json',
-									'Authorization': `Bearer ${apiKey.substring(0, 8)}...`
-								});
-								
-								// 检查API URL是否正确
-								if (!apiUrl.includes('moonshot') && !apiUrl.includes('openai')) {
-									console.warn('API URL可能不是Moonshot官方地址，请确认是否为: https://api.moonshot.cn/v1/chat/completions');
-								}
-								
-								try {
-									const response = await eda.sys_ClientUrl.request(
-										apiUrl,
-										'POST',
-										JSON.stringify(requestBody),
-										{
-											headers: {
-												'Content-Type': 'application/json',
-												'Authorization': `Bearer ${apiKey}`,
-											},
-										},
-									);
-									
-									console.log('图片处理响应状态:', response.status);
+								}),
+								{
+									headers: {
+										'Content-Type': 'application/json',
+										'Authorization': `Bearer ${apiKey}`,
+									},
+								},
+							);
 
 							if (!response.ok) {
-															console.error('请求失败:', response.status, response.statusText);
-															if (response.status === 429) {
-																eda.sys_ToastMessage.showMessage(`请求过多，超出接口额度限制`, 0);
-															} else if (response.status === 413) {
-																eda.sys_ToastMessage.showMessage(`图片大小或Tokens数量超出模型上下文窗口限制，请减小图片尺寸或减少对话内容`, 0);
-															} else if (response.status === 400) {
-																const errorText = await response.text();
-																if (errorText.includes('context_length_exceeded') || errorText.includes('maximum context length')) {
-																	eda.sys_ToastMessage.showMessage(`对话内容或图片过大，超出模型最大上下文长度限制，请清理部分对话或减小图片尺寸`, 0);
-																} else {
-																	eda.sys_ToastMessage.showMessage(`请求参数错误，请检查配置`, 0);
-																}
-															} else {
-														eda.sys_ToastMessage.showMessage(`请检查URL和Key是否正确`, 0);
-													}
-													return;
-												}
-												} catch (error) {
-													console.error('网络请求失败:', error);
-													eda.sys_ToastMessage.showMessage(`网络请求失败: ${error.message}`, 0);
-													return;
-												}
+								console.error('请求失败:', response.status, response.statusText);
+								if (response.status === 429) {
+									eda.sys_ToastMessage.showMessage(`请求过多，超出接口额度限制`, 0);
+								} else {
+									eda.sys_ToastMessage.showMessage(`请检查URL和Key是否正确`, 0);
+								}
+								return;
+							}
 
-													const reader = response.body.getReader();
+							const reader = response.body.getReader();
 							isStreaming = true;
 
 							// 生成新的消息ID
@@ -838,219 +706,206 @@
 					}
 				});
 				messageInput.addEventListener('paste', async (e) => {
-					e.preventDefault(); // 阻止默认粘贴行为
-
 					try {
 						// 获取剪贴板中的数据
 						const items = e.clipboardData.items;
+						let hasImage = false;
+
+						// 检查是否包含图片
 						for (const item of items) {
-						if (item.type.indexOf('image') !== -1) {
-							// 检查粘贴的内容是否为图片
-							const file = item.getAsFile(); // 将图片转换为文件对象
-
-							if (file) {
-								// 检查当前模型是否为视觉模型
-								const currentModel = modelSelect.value;
-								const isVisionModel = currentModel.includes('vision-preview');
-								
-								if (!isVisionModel) {
-									// 如果当前不是视觉模型，自动切换到8K视觉模型
-									modelSelect.value = 'moonshot-v1-8k-vision-preview';
-									// 触发模型选择变化事件
-									modelSelect.dispatchEvent(new Event('change'));
-									// 显示提示信息
-									eda.sys_ToastMessage.showMessage('已自动切换到8K视觉模型以支持图片分析', 1);
-								}
-									const reader = new FileReader();
-									reader.onload = async (event) => {
-										const imageBase64 = event.target.result;
-										const imageUrl = `data:${file.type};base64,${imageBase64.split(',')[1]}`;
-
-										// 构造视觉模型请求
-										const message = '\n请根据图片分析电路';
-										const visionMessage = {
-											role: 'user',
-											content: [
-												{
-													type: 'image_url',
-													image_url: { url: imageUrl },
-												},
-												{
-													type: 'text',
-													text: message,
-												},
-											],
-										};
-
-										// 将视觉模型请求发送到对话历史
-										messages.push(visionMessage);
-
-										// 显示缩略图
-										const thumbnail = document.createElement('img');
-										thumbnail.src = imageUrl;
-										thumbnail.style.maxWidth = '200px';
-										thumbnail.style.height = 'auto';
-										thumbnail.style.margin = '10px';
-										thumbnail.style.border = '1px solid #ddd';
-										thumbnail.className = 'user-message';
-
-										// 显示缩略图和消息
-										const messageDiv = document.createElement('div');
-										messageDiv.style.marginLeft = 'auto';
-										messageDiv.className = 'user-message';
-										messageDiv.appendChild(thumbnail);
-										messageDiv.innerHTML += message.replace('\n', '<br />');
-
-										if (!messageDiv.parentNode) {
-											chatContainer.appendChild(messageDiv);
-										}
-
-										chatContainer.scrollTop = chatContainer.scrollHeight;
-
-										// 如果API地址或密钥未填写，提示用户
-										if (apiUrlInput.value === '' || apiKeyInput.value === '') {
-											eda.sys_ToastMessage.showMessage(`请填写URL和Key`, 1);
-											return;
-										}
-
-										// 构造API请求数据
-										const apiUrl = apiUrlInput.value;
-										const apiKey = apiKeyInput.value;
-
-										// 限制上下文长度为最新20条消息
-										const limitedMessages = systemMessagesVision.concat(messages.slice(-20));
-
-										// 打印传递给AI的上下文
-										console.log('Context sent to AI:', limitedMessages);
-
-										// 清空输入框
-										messageInput.value = '';
-
-										// 检查是否启用联网搜索
-														const enableWebSearchPaste = document.getElementById('web-search-toggle').checked;
-
-														const requestBody = {
-															model: modelSelect.value,
-															messages: limitedMessages, // 合并系统消息和对话历史
-															temperature: 0.3,
-															stream: true,
-														};
-
-														// 如果启用联网搜索，添加tools参数
-														if (enableWebSearchPaste) {
-															requestBody.tools = [
-																{
-																	type: 'function',
-																	function: {
-																			name: 'get_web_search_results',
-																	},
-																},
-															];
-															console.log('已添加web search工具到图片处理');
-														}
-
-								const response = await eda.sys_ClientUrl.request(
-									apiUrl,
-									'POST',
-									JSON.stringify(requestBody),
-									{
-										headers: {
-											'Content-Type': 'application/json',
-											'Authorization': `Bearer ${apiKey}`,
-										},
-									},
-								);
-
-										if (!response.ok) {
-								console.error('请求失败:', response.status, response.statusText);
-								if (response.status === 429) {
-									eda.sys_ToastMessage.showMessage(`请求过多，超出接口额度限制`, 0);
-								} else if (response.status === 413) {
-									eda.sys_ToastMessage.showMessage(`Tokens数量超出模型上下文窗口限制，请减少对话内容或切换更大上下文窗口的模型`, 0);
-								} else if (response.status === 400) {
-									const errorText = await response.text();
-									if (errorText.includes('context_length_exceeded') || errorText.includes('maximum context length')) {
-										eda.sys_ToastMessage.showMessage(`对话内容过长，超出模型最大上下文长度限制，请清理部分对话或切换更大上下文窗口的模型`, 0);
-									} else {
-										eda.sys_ToastMessage.showMessage(`请求参数错误，请检查配置`, 0);
-									}
-								} else {
-									eda.sys_ToastMessage.showMessage(`请检查URL和Key是否正确`, 0);
-								}
-								return;
+							if (item.type.indexOf('image') !== -1) {
+								hasImage = true;
+								break;
 							}
+						}
 
-										const reader = response.body.getReader();
-										isStreaming = true;
+						// 如果包含图片，阻止默认行为并处理图片
+						if (hasImage) {
+							e.preventDefault();
 
-										// 生成新的消息ID
-										id++;
+							for (const item of items) {
+								if (item.type.indexOf('image') !== -1) {
+									// 检查粘贴的内容是否为图片
+									const file = item.getAsFile(); // 将图片转换为文件对象
 
-										sendButton.innerHTML = `<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
+									if (file) {
+										// 检查当前模型是否为视觉模型
+										const currentModel = modelSelect.value;
+										const isVisionModel = currentModel.includes('vision-preview');
+
+										if (!isVisionModel) {
+											// 如果当前不是视觉模型，自动切换到8K视觉模型
+											modelSelect.value = 'moonshot-v1-8k-vision-preview';
+											// 触发模型选择变化事件
+											modelSelect.dispatchEvent(new Event('change'));
+											// 显示提示信息
+											eda.sys_ToastMessage.showMessage('已自动切换到8K视觉模型以支持图片分析', 1);
+										}
+										const reader = new FileReader();
+										reader.onload = async (event) => {
+											const imageBase64 = event.target.result;
+											const imageUrl = `data:${file.type};base64,${imageBase64.split(',')[1]}`;
+
+											// 构造视觉模型请求
+											const message = '\n请根据图片分析电路';
+											const visionMessage = {
+												role: 'user',
+												content: [
+													{
+														type: 'image_url',
+														image_url: { url: imageUrl },
+													},
+													{
+														type: 'text',
+														text: message,
+													},
+												],
+											};
+
+											// 将视觉模型请求发送到对话历史
+											messages.push(visionMessage);
+
+											// 显示缩略图
+											const thumbnail = document.createElement('img');
+											thumbnail.src = imageUrl;
+											thumbnail.style.maxWidth = '200px';
+											thumbnail.style.height = 'auto';
+											thumbnail.style.margin = '10px';
+											thumbnail.style.border = '1px solid #ddd';
+											thumbnail.className = 'user-message';
+
+											// 显示缩略图和消息
+											const messageDiv = document.createElement('div');
+											messageDiv.style.marginLeft = 'auto';
+											messageDiv.className = 'user-message';
+											messageDiv.appendChild(thumbnail);
+											messageDiv.innerHTML += message.replace('\n', '<br />');
+
+											if (!messageDiv.parentNode) {
+												chatContainer.appendChild(messageDiv);
+											}
+
+											chatContainer.scrollTop = chatContainer.scrollHeight;
+
+											// 如果API地址或密钥未填写，提示用户
+											if (apiUrlInput.value === '' || apiKeyInput.value === '') {
+												eda.sys_ToastMessage.showMessage(`请填写URL和Key`, 1);
+												return;
+											}
+
+											// 构造API请求数据
+											const apiUrl = apiUrlInput.value;
+											const apiKey = apiKeyInput.value;
+
+											// 限制上下文长度为最新20条消息
+											const limitedMessages = systemMessagesVision.concat(messages.slice(-20));
+
+											// 打印传递给AI的上下文
+											console.log('Context sent to AI:', limitedMessages);
+
+											// 清空输入框
+											messageInput.value = '';
+
+											const response = await eda.sys_ClientUrl.request(
+												apiUrl,
+												'POST',
+												JSON.stringify({
+													model: modelSelect.value,
+													messages: limitedMessages, // 合并系统消息和对话历史
+													temperature: 0.3,
+													stream: true,
+												}),
+												{
+													headers: {
+														'Content-Type': 'application/json',
+														'Authorization': `Bearer ${apiKey}`,
+													},
+												},
+											);
+
+											if (!response.ok) {
+												console.error('请求失败:', response.status, response.statusText);
+												if (response.status === 429) {
+													eda.sys_ToastMessage.showMessage(`请求过多，超出接口额度限制`, 0);
+												} else {
+													eda.sys_ToastMessage.showMessage(`请检查URL和Key是否正确`, 0);
+												}
+												return;
+											}
+
+											const reader = response.body.getReader();
+											isStreaming = true;
+
+											// 生成新的消息ID
+											id++;
+
+											sendButton.innerHTML = `<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
                                 <path fill="currentColor" d="M6 6h12v12H6z" />
                                 </svg>`;
-										sendButton.removeEventListener('click', sendMessage);
-										sendButton.addEventListener('click', () => stopStreaming(reader, sendButton));
+											sendButton.removeEventListener('click', sendMessage);
+											sendButton.addEventListener('click', () => stopStreaming(reader, sendButton));
 
-										// 用于拼接流式传输的完整消息
-										let assistantMessage = '';
+											// 用于拼接流式传输的完整消息
+											let assistantMessage = '';
 
-										while (isStreaming) {
-											const { done, value } = await reader.read();
-											if (done || !isStreaming) break;
+											while (isStreaming) {
+												const { done, value } = await reader.read();
+												if (done || !isStreaming) break;
 
-											const decoder = new TextDecoder();
-											const chunk = decoder.decode(value, { stream: true });
-											const lines = chunk.split('\n');
+												const decoder = new TextDecoder();
+												const chunk = decoder.decode(value, { stream: true });
+												const lines = chunk.split('\n');
 
-											lines.forEach((line) => {
-												if (line.startsWith('data: ')) {
-													const data = line.substring(6);
-													if (data === '[DONE]') return;
+												lines.forEach((line) => {
+													if (line.startsWith('data: ')) {
+														const data = line.substring(6);
+														if (data === '[DONE]') return;
 
-													try {
-														const chunkJson = JSON.parse(data);
-														const content = chunkJson.choices[0].delta.content;
-														if (content) {
-															// 拼接流式传输的完整消息
-															assistantMessage += content;
+														try {
+															const chunkJson = JSON.parse(data);
+															const content = chunkJson.choices[0].delta.content;
+															if (content) {
+																// 拼接流式传输的完整消息
+																assistantMessage += content;
 
-															// 逐步显示AI的回复
-															displayMessage(content, id, false);
+																// 逐步显示AI的回复
+																displayMessage(content, id, false);
+															}
+														} catch (error) {
+															console.error('Error parsing chunk:', error);
 														}
-													} catch (error) {
-														console.error('Error parsing chunk:', error);
 													}
-												}
-											});
-										}
+												});
+											}
 
-										// 将拼接后的完整消息添加到对话历史
-										if (assistantMessage) {
-											messages.push({
-												role: 'assistant',
-												content: assistantMessage,
-											});
-											// 将完整消息显示在聊天窗口中
-											displayMessage(assistantMessage, id, false);
-										}
+											// 将拼接后的完整消息添加到对话历史
+											if (assistantMessage) {
+												messages.push({
+													role: 'assistant',
+													content: assistantMessage,
+												});
+												// 将完整消息显示在聊天窗口中
+												displayMessage(assistantMessage, id, false);
+											}
 
-										// 恢复按钮状态
-										sendButton.innerHTML = `<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
+											// 恢复按钮状态
+											sendButton.innerHTML = `<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
                                 <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
                                 </svg>`;
-										sendButton.removeEventListener('click', () => stopStreaming(reader, sendButton));
-										sendButton.addEventListener('click', sendMessage);
-										isStreaming = false;
-									};
+											sendButton.removeEventListener('click', () => stopStreaming(reader, sendButton));
+											sendButton.addEventListener('click', sendMessage);
+											isStreaming = false;
+										};
 
-									// 将图片转换为 Base64 格式
-									reader.readAsDataURL(file);
+										// 将图片转换为 Base64 格式
+										reader.readAsDataURL(file);
+									}
 								}
 							}
 						}
+						// 如果没有图片，允许默认的文本粘贴行为
 					} catch (error) {
-						console.error('粘贴图片失败:', error);
+						console.error('粘贴处理失败:', error);
 					}
 				});
 
