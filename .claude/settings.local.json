@@ -1,0 +1,5 @@
+{
+	"permissions": {
+		"allow": ["WebFetch(domain:prodocs.lceda.cn)"]
+	}
+}

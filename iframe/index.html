@@ -379,16 +379,15 @@
 					// 监听元件选择事件
 					eda.sys_ToastMessage.showMessage(`请左键单击原理图中需查询的元件`, 3);
 					eda.sch_Event.addMouseEventListener(
-						'1',
+						'sendGreeting',
 						'selected',
 						async (eventType) => {
-							const selectedPrimitives = await eda.sch_SelectControl.getSelectedPrimitives();
+							const selectedPrimitives = await eda.sch_SelectControl.getAllSelectedPrimitives();
 							if (selectedPrimitives.length > 0) {
-								const id = selectedPrimitives[0].id;
-								const primitiveComponent = await eda.sch_PrimitiveComponent.get(id);
-								if (primitiveComponent.length > 0) {
-									// 获取元件名称
-									const newStr = primitiveComponent[0].subPartName.split('.');
+								const component = selectedPrimitives[0];
+								if (component.subPartName) {
+									// 获取元件名称，去掉后缀 ".1"
+									const newStr = component.subPartName.split('.');
 									newStr.pop();
 									const message = `请介绍 ${newStr.join('.')} 的功能及应用场景`;
 									messageInput.value = message;
@@ -396,7 +395,7 @@
 								}
 							}
 						},
-						1,
+						true,
 					);
 				}
 
@@ -407,16 +406,15 @@
 					// 监听元件选择事件
 					eda.sys_ToastMessage.showMessage(`请左键单击原理图中需查询的元件`, 3);
 					eda.sch_Event.addMouseEventListener(
-						'1',
+						'similarGreeting',
 						'selected',
 						async (eventType) => {
-							const selectedPrimitives = await eda.sch_SelectControl.getSelectedPrimitives();
+							const selectedPrimitives = await eda.sch_SelectControl.getAllSelectedPrimitives();
 							if (selectedPrimitives.length > 0) {
-								const id = selectedPrimitives[0].id;
-								const primitiveComponent = await eda.sch_PrimitiveComponent.get(id);
-								if (primitiveComponent.length > 0) {
-									// 获取元件名称
-									const newStr = primitiveComponent[0].subPartName.split('.');
+								const component = selectedPrimitives[0];
+								if (component.subPartName) {
+									// 获取元件名称，去掉后缀 ".1"
+									const newStr = component.subPartName.split('.');
 									newStr.pop();
 									const message = `请介绍 ${newStr.join('.')} 的相似物料`;
 									messageInput.value = message;
@@ -424,108 +422,208 @@
 								}
 							}
 						},
-						1,
+						true,
 					);
 				}
 
 				/**
-				 * 解析网表
-				 */
-				/**
 				 * 解析网表并发送给 AI
 				 */
 				async function parseNetlist() {
-					// 检查当前模型是否支持网表分析
-					const selectedModel = modelSelect.value;
-					const supportsNetlistAnalysis =
-						selectedModel.includes('32k') ||
-						selectedModel.includes('128k') ||
-						selectedModel === 'kimi-k2-0905-preview' ||
-						selectedModel === 'kimi-k2-turbo-preview';
-
-					if (!supportsNetlistAnalysis) {
-						eda.sys_ToastMessage.showMessage(`当前模型不支持网表分析，请切换到支持的模型`, 1);
-						return;
-					}
-
-					const netlistString = await eda.sch_Netlist.getNetlist('JLCEDA');
-
-					// 解析网表JSON并精简关键信息
-					let simplifiedNetlist = '';
 					try {
-						const netlistData = JSON.parse(netlistString);
-						console.log('原始网表数据:', netlistData);
+						// 检查当前模型是否支持网表分析
+						const selectedModel = modelSelect.value;
+						const supportsNetlistAnalysis =
+							selectedModel.includes('32k') ||
+							selectedModel.includes('128k') ||
+							selectedModel === 'kimi-k2-0905-preview' ||
+							selectedModel === 'kimi-k2-turbo-preview';
 
-						// 精简网表信息，只保留关键信息
-						const components = [];
-						const connections = [];
+						if (!supportsNetlistAnalysis) {
+							eda.sys_ToastMessage.showMessage(`当前模型不支持网表分析，请切换到支持的模型`, 1);
+							return;
+						}
 
-						for (const [componentId, component] of Object.entries(netlistData)) {
-							if (component.props && component.pins) {
-								// 提取关键器件信息
-								const componentInfo = {
-									designator: component.props.Designator || componentId,
-									name: component.props['Manufacturer Part'] || component.props.DeviceName || component.props.Name,
-									value: component.props.Value,
-									description: component.props.Description,
-									pins: component.pins,
-								};
+						// 如果API地址或密钥未填写，提示用户
+						if (apiUrlInput.value === '' || apiKeyInput.value === '') {
+							eda.sys_ToastMessage.showMessage(`请填写URL和Key`, 1);
+							return;
+						}
 
-								// 过滤掉空值
-								Object.keys(componentInfo).forEach((key) => {
-									if (!componentInfo[key] || componentInfo[key] === '') {
-										delete componentInfo[key];
-									}
-								});
+						eda.sys_ToastMessage.showMessage(`正在获取网表数据...`, 3);
 
-								components.push(componentInfo);
+						const netlistString = await eda.sch_Netlist.getNetlist('JLCEDA');
 
-								// 收集连接信息
-								for (const [pinNum, netName] of Object.entries(component.pins)) {
-									if (netName && netName !== '') {
-										connections.push({
-											component: componentInfo.designator,
-											pin: pinNum,
-											net: netName,
-										});
+						if (!netlistString) {
+							eda.sys_ToastMessage.showMessage(`获取网表失败，请确保已打开原理图`, 1);
+							return;
+						}
+
+						// 解析网表JSON并精简关键信息
+						let simplifiedNetlist = '';
+						try {
+							const netlistData = JSON.parse(netlistString);
+							console.log('原始网表数据:', netlistData);
+
+							// 精简网表信息，只保留关键信息
+							const components = [];
+							const connections = [];
+
+							for (const [componentId, component] of Object.entries(netlistData)) {
+								if (component.props && component.pins) {
+									// 提取关键器件信息
+									const componentInfo = {
+										designator: component.props.Designator || componentId,
+										name: component.props['Manufacturer Part'] || component.props.DeviceName || component.props.Name,
+										value: component.props.Value,
+										description: component.props.Description,
+										pins: component.pins,
+									};
+
+									// 过滤掉空值
+									Object.keys(componentInfo).forEach((key) => {
+										if (!componentInfo[key] || componentInfo[key] === '') {
+											delete componentInfo[key];
+										}
+									});
+
+									components.push(componentInfo);
+
+									// 收集连接信息
+									for (const [pinNum, netName] of Object.entries(component.pins)) {
+										if (netName && netName !== '') {
+											connections.push({
+												component: componentInfo.designator,
+												pin: pinNum,
+												net: netName,
+											});
+										}
 									}
 								}
 							}
+
+							// 构建精简的网表描述
+							simplifiedNetlist = `器件列表:\n${components
+								.map(
+									(comp) =>
+										`${comp.designator}: ${comp.name || ''}${comp.value ? ` (${comp.value})` : ''}${comp.description ? ` - ${comp.description.substring(0, 50)}...` : ''}`,
+								)
+								.join('\n')}\n\n连接关系:\n${connections.map((conn) => `${conn.component}.${conn.pin} -> ${conn.net}`).join('\n')}`;
+
+							console.log('精简后的网表信息:', simplifiedNetlist);
+						} catch (error) {
+							console.error('网表解析错误:', error);
+							// 如果解析失败，使用原始字符串的前1000个字符
+							simplifiedNetlist = netlistString.substring(0, 1000) + (netlistString.length > 1000 ? '...' : '');
+							console.log('使用截断的原始网表:', simplifiedNetlist);
 						}
 
-						// 构建精简的网表描述
-						simplifiedNetlist = `器件列表:\n${components
-							.map(
-								(comp) =>
-									`${comp.designator}: ${comp.name || ''}${comp.value ? ` (${comp.value})` : ''}${comp.description ? ` - ${comp.description.substring(0, 50)}...` : ''}`,
-							)
-							.join('\n')}\n\n连接关系:\n${connections.map((conn) => `${conn.component}.${conn.pin} -> ${conn.net}`).join('\n')}`;
+						// 显示用户消息
+						const userDisplayMessage = '请分析当前原理图的网表内容';
+						displayMessage(userDisplayMessage, null, true);
 
-						console.log('精简后的网表信息:', simplifiedNetlist);
+						// 构造完整的用户消息（包含网表内容）
+						const fullUserMessage = `以下是电路原理图的网表内容：\n\`\`\`\n${simplifiedNetlist}\n\`\`\`\n请仔细分析后告诉我整体电路的功能、特点以及可能存在的问题。`;
+
+						// 添加到对话历史
+						messages.push({
+							role: 'user',
+							content: fullUserMessage,
+						});
+
+						// 构造API请求数据
+						const apiUrl = apiUrlInput.value;
+						const apiKey = apiKeyInput.value;
+
+						// 限制上下文长度为最新20条消息
+						const limitedMessages = systemMessages.concat(messages.slice(-20));
+
+						console.log('Context sent to AI:', limitedMessages);
+
+						const response = await eda.sys_ClientUrl.request(
+							apiUrl,
+							'POST',
+							JSON.stringify({
+								model: modelSelect.value,
+								messages: limitedMessages,
+								temperature: 0.3,
+								stream: true,
+							}),
+							{
+								headers: {
+									'Content-Type': 'application/json',
+									'Authorization': `Bearer ${apiKey}`,
+								},
+							},
+						);
+
+						if (!response.ok) {
+							console.error('请求失败:', response.status, response.statusText);
+							if (response.status === 429) {
+								eda.sys_ToastMessage.showMessage(`请求过多，超出接口额度限制`, 0);
+							} else {
+								eda.sys_ToastMessage.showMessage(`请检查URL和Key是否正确`, 0);
+							}
+							return;
+						}
+
+						const streamReader = response.body.getReader();
+						isStreaming = true;
+						id++;
+
+						sendButton.innerHTML = `<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
+							<path fill="currentColor" d="M6 6h12v12H6z" />
+						</svg>`;
+						sendButton.removeEventListener('click', sendMessage);
+						sendButton.addEventListener('click', () => stopStreaming(streamReader, sendButton));
+
+						let assistantMessage = '';
+
+						while (isStreaming) {
+							const { done, value } = await streamReader.read();
+							if (done || !isStreaming) break;
+
+							const decoder = new TextDecoder();
+							const chunk = decoder.decode(value, { stream: true });
+							const lines = chunk.split('\n');
+
+							lines.forEach((line) => {
+								if (line.startsWith('data: ')) {
+									const data = line.substring(6);
+									if (data === '[DONE]') return;
+
+									try {
+										const chunkJson = JSON.parse(data);
+										const content = chunkJson.choices[0].delta.content;
+										if (content) {
+											assistantMessage += content;
+											displayMessage(content, id, false);
+										}
+									} catch (error) {
+										console.error('Error parsing chunk:', error);
+									}
+								}
+							});
+						}
+
+						if (assistantMessage) {
+							messages.push({
+								role: 'assistant',
+								content: assistantMessage,
+							});
+						}
+
+						// 恢复按钮状态
+						sendButton.innerHTML = `<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
+							<path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+						</svg>`;
+						sendButton.removeEventListener('click', () => stopStreaming(streamReader, sendButton));
+						sendButton.addEventListener('click', sendMessage);
+						isStreaming = false;
 					} catch (error) {
-						console.error('网表解析错误:', error);
-						// 如果解析失败，使用原始字符串的前1000个字符
-						simplifiedNetlist = netlistString.substring(0, 1000) + (netlistString.length > 1000 ? '...' : '');
-						console.log('使用截断的原始网表:', simplifiedNetlist);
+						console.error('网表分析失败:', error);
+						eda.sys_ToastMessage.showMessage(`网表分析失败，请检查是否已打开原理图`, 0);
 					}
-
-					const messagePrompt = '请分析当前原理图的网表内容';
-					// 构造提示词，让 AI 理解网表内容
-					const systemMessage = {
-						role: 'system',
-						content:
-							'您接收到的是一个电路原理图的网表内容。请仔细分析后告诉我整体电路的功能、特点以及可能存在的问题。我会根据您的回答，进一步提出相关问题。',
-					};
-
-					// 将精简的网表内容和提示词添加到对话历史中
-					messages.push(systemMessage);
-					messages.push({
-						role: 'user',
-						content: `以下是电路原理图的网表内容：\n\`\`\`\n${simplifiedNetlist}\n\`\`\`\n请分析并回复。`,
-					});
-
-					messageInput.value = messagePrompt;
-					sendMessage({ preventDefault: () => {} });
 				}
 
 				/////////////////视觉模型/////////////////////
