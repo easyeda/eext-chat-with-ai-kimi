@@ -61,8 +61,8 @@ jobs:
           echo "🔎 Extracting changelog for version $VERSION from CHANGELOG.md"
           # 转义版本号中的点号，避免正则误匹配
           ESCAPED_VERSION=$(echo "$VERSION" | sed 's/\./\\./g')
-          # 精确匹配版本号（支持 ## 1.4.1 / ## v1.4.1 / ## 1.4.1 (2026-04-29) 等格式）
-          NOTES=$(awk "/^## v?${ESCAPED_VERSION}([[:space:]]|$)/ {flag=1; next} /^## / {if(flag) exit} flag" CHANGELOG.md)
+          # 精确匹配版本号（支持 ## [1.4.1] / ## 1.4.1 / ## v1.4.1 / ## 1.4.1 (2026-04-29) 等格式）
+          NOTES=$(awk "/^## \[?v?${ESCAPED_VERSION}\]?([[:space:]]|$)/ {flag=1; next} /^## / {if(flag) exit} flag" CHANGELOG.md)
           # 去除首尾空行
           NOTES=$(echo "$NOTES" | sed '/./,$!d' | sed -e :a -e '/^\n*$/{$d;N;ba}')
 
