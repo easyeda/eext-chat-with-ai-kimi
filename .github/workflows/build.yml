@@ -1,0 +1,108 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main # main 分支触发
+      - master # master 分支触发
+  workflow_dispatch: # 手动触发
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 检查已有tag
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+
+      - name: Get version & extension name from extension.json
+        id: meta
+        run: |
+          echo "VERSION=$(jq -r .version extension.json)" >> $GITHUB_ENV
+          echo "EEXTNAME=$(jq -r .name extension.json)" >> $GITHUB_ENV
+
+      - name: Check and create tag
+        id: check_tag
+        run: |
+          VERSION=${{ env.VERSION }}
+          TAG="v${VERSION}"
+
+          echo "🔎 检查 tag $TAG 是否存在..."
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "⚠️ Tag $TAG 已存在，跳过发布。"
+            echo "SKIP_RELEASE=true" >> $GITHUB_ENV
+          else
+            echo "✅ Tag $TAG 不存在，创建并推送。"
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag -a "$TAG" -m "Release $TAG"
+            git push origin "$TAG"
+            echo "SKIP_RELEASE=false" >> $GITHUB_ENV
+          fi
+
+      - name: Extract changelog for version
+        if: env.SKIP_RELEASE == 'false'
+        id: changelog
+        run: |
+          VERSION=${{ env.VERSION }}
+          EEXTNAME=${{ env.EEXTNAME }}
+          echo "🔎 Extracting changelog for version $VERSION from CHANGELOG.md"
+          # 转义版本号中的点号，避免正则误匹配
+          ESCAPED_VERSION=$(echo "$VERSION" | sed 's/\./\\./g')
+          # 精确匹配版本号（支持 ## 1.4.1 / ## v1.4.1 / ## 1.4.1 (2026-04-29) 等格式）
+          NOTES=$(awk "/^## v?${ESCAPED_VERSION}([[:space:]]|$)/ {flag=1; next} /^## / {if(flag) exit} flag" CHANGELOG.md)
+          # 去除首尾空行
+          NOTES=$(echo "$NOTES" | sed '/./,$!d' | sed -e :a -e '/^\n*$/{$d;N;ba}')
+
+          if [ -z "$(echo "$NOTES" | tr -d '[:space:]')" ]; then
+            echo "⚠️ CHANGELOG.md 中未找到版本 $VERSION 的记录，使用默认说明"
+            NOTES="Release v${VERSION}"
+          else
+            echo "✅ 已从 CHANGELOG.md 中提取版本 $VERSION 的更新日志"
+          fi
+
+          NOTES="$NOTES\n\n---\n由GitHub Actions自动构建并发布\nBuilt and released automatically by GitHub Actions\n\n也可前往[嘉立创EDA扩展广场](https://ext.lceda.cn/item/oshwhub/${EEXTNAME})下载\nAlso available at [JLCEDA Extension Plaza](https://ext.lceda.cn/item/oshwhub/${EEXTNAME})"
+
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
+          echo -e "$NOTES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          echo "------ Release Notes ------"
+          echo -e "$NOTES"
+          echo "---------------------------"
+
+      - name: Debug check artifact
+        if: env.SKIP_RELEASE == 'false'
+        run: |
+          VERSION=${{ env.VERSION }}
+          EEXTNAME=${{ env.EEXTNAME }}
+          FILE="build/dist/${EEXTNAME}_v${VERSION}.eext"
+          if [ -f "$FILE" ]; then
+            echo "✅ 产物存在: $FILE"
+          else
+            echo "❌ 未发现产物: $FILE"
+            ls -R build || true
+            exit 1
+          fi
+
+      - name: Upload Release
+        if: env.SKIP_RELEASE == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: Release v${{ env.VERSION }}
+          body: ${{ env.RELEASE_NOTES }}
+          files: build/dist/${{ env.EEXTNAME }}_v${{ env.VERSION }}.eext
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
