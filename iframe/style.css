@@ -302,6 +302,20 @@ body {
 	font-weight: 500;
 }
 
+/* ================= 错误消息样式 ================= */
+.error-message {
+	color: #991b1b;
+	background-color: #fee2e2;
+	border-left: 3px solid #ef4444;
+	padding: 10px 14px;
+	max-width: 85%;
+	border-radius: 8px;
+	margin-left: 2%;
+	font-size: 13px;
+	line-height: 1.5;
+	box-shadow: 0 2px 4px rgba(239, 68, 68, 0.1);
+}
+
 /* ================= 滚动条优化 ================= */
 #chat-container::-webkit-scrollbar {
 	width: 8px;

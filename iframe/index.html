@@ -256,12 +256,20 @@
 							);
 
 							if (!response.ok) {
-								console.error('请求失败:', response.status, response.statusText);
-								if (response.status === 429) {
-									eda.sys_ToastMessage.showMessage(`请求过多，超出接口额度限制`, 0);
-								} else {
-									eda.sys_ToastMessage.showMessage(`请检查URL和Key是否正确`, 0);
+								const errBody = await response.text();
+								let errMsg = `HTTP ${response.status}`;
+								try {
+									const errJson = JSON.parse(errBody);
+									if (errJson.error && errJson.error.message) {
+										errMsg += `：${errJson.error.message}`;
+									} else {
+										errMsg += `：${errBody}`;
+									}
+								} catch (_) {
+									errMsg += `：${errBody || response.statusText}`;
 								}
+								console.error('请求失败:', errMsg);
+								displayError(errMsg);
 								return;
 							}
 
@@ -325,7 +333,7 @@
 						}
 					} catch (error) {
 						console.error('Upload failed:', error);
-						eda.sys_ToastMessage.showMessage(`请检查外部交互是否开启`, 0);
+						displayError(`发送失败：请检查外部交互是否开启（${error.message || error}）`);
 					}
 				}
 
@@ -369,6 +377,15 @@
 						chatContainer.appendChild(messageDiv);
 					}
 
+					chatContainer.scrollTop = chatContainer.scrollHeight;
+				}
+
+				// 显示错误消息到对话框
+				function displayError(message) {
+					const errorDiv = document.createElement('div');
+					errorDiv.className = 'error-message';
+					errorDiv.innerHTML = `⚠ ${message}`;
+					chatContainer.appendChild(errorDiv);
 					chatContainer.scrollTop = chatContainer.scrollHeight;
 				}
 
@@ -558,12 +575,20 @@
 						);
 
 						if (!response.ok) {
-							console.error('请求失败:', response.status, response.statusText);
-							if (response.status === 429) {
-								eda.sys_ToastMessage.showMessage(`请求过多，超出接口额度限制`, 0);
-							} else {
-								eda.sys_ToastMessage.showMessage(`请检查URL和Key是否正确`, 0);
+							const errBody = await response.text();
+							let errMsg = `HTTP ${response.status}`;
+							try {
+								const errJson = JSON.parse(errBody);
+								if (errJson.error && errJson.error.message) {
+									errMsg += `：${errJson.error.message}`;
+								} else {
+									errMsg += `：${errBody}`;
+								}
+							} catch (_) {
+								errMsg += `：${errBody || response.statusText}`;
 							}
+							console.error('请求失败:', errMsg);
+							displayError(errMsg);
 							return;
 						}
 
@@ -622,7 +647,7 @@
 						isStreaming = false;
 					} catch (error) {
 						console.error('网表分析失败:', error);
-						eda.sys_ToastMessage.showMessage(`网表分析失败，请检查是否已打开原理图`, 0);
+						displayError(`网表分析失败：请检查是否已打开原理图（${error.message || error}）`);
 					}
 				}
 
@@ -726,12 +751,20 @@
 							);
 
 							if (!response.ok) {
-								console.error('请求失败:', response.status, response.statusText);
-								if (response.status === 429) {
-									eda.sys_ToastMessage.showMessage(`请求过多，超出接口额度限制`, 0);
-								} else {
-									eda.sys_ToastMessage.showMessage(`请检查URL和Key是否正确`, 0);
+								const errBody = await response.text();
+								let errMsg = `HTTP ${response.status}`;
+								try {
+									const errJson = JSON.parse(errBody);
+									if (errJson.error && errJson.error.message) {
+										errMsg += `：${errJson.error.message}`;
+									} else {
+										errMsg += `：${errBody}`;
+									}
+								} catch (_) {
+									errMsg += `：${errBody || response.statusText}`;
 								}
+								console.error('请求失败:', errMsg);
+								displayError(errMsg);
 								return;
 							}
 
@@ -922,12 +955,20 @@
 											);
 
 											if (!response.ok) {
-												console.error('请求失败:', response.status, response.statusText);
-												if (response.status === 429) {
-													eda.sys_ToastMessage.showMessage(`请求过多，超出接口额度限制`, 0);
-												} else {
-													eda.sys_ToastMessage.showMessage(`请检查URL和Key是否正确`, 0);
+												const errBody = await response.text();
+												let errMsg = `HTTP ${response.status}`;
+												try {
+													const errJson = JSON.parse(errBody);
+													if (errJson.error && errJson.error.message) {
+														errMsg += `：${errJson.error.message}`;
+													} else {
+														errMsg += `：${errBody}`;
+													}
+												} catch (_) {
+													errMsg += `：${errBody || response.statusText}`;
 												}
+												console.error('请求失败:', errMsg);
+												displayError(errMsg);
 												return;
 											}
 
@@ -1004,6 +1045,7 @@
 						// 如果没有图片，允许默认的文本粘贴行为
 					} catch (error) {
 						console.error('粘贴处理失败:', error);
+						displayError(`粘贴处理失败：${error.message || error}`);
 					}
 				});
 
