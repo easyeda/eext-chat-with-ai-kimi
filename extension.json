@@ -15,7 +15,10 @@
   },
   "categories": "Other",
   "keywords": [
-    "AI"
+    "ai",
+    "chatbot",
+    "component-query",
+    "netlist"
   ],
   "images": {
     "logo": "./images/logo.png",
