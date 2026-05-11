@@ -1,5 +1,7 @@
 # Kimi AI 助手
 
+[English](./README.en.md)
+
 ## 功能概述
 
 Kimi AI 助手是一款专为 PCB 设计人员开发的智能工具，具备以下核心功能：
