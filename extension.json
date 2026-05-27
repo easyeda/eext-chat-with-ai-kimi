@@ -4,17 +4,17 @@
 	"displayName": "AI助手Kimi",
 	"description": "通过设置 Kimi 的自定义 URL 和 Key 后进行AI对话，支持查询元件和解析网表",
 	"version": "2.5.1",
-	"publisher": "JLCEDA",
+	"publisher": "EasyEDA",
 	"engines": {
 		"eda": "^2.2.34"
 	},
 	"license": "MIT License",
 	"repository": {
-		"type": "extension-store",
-		"url": ""
+		"type": "github",
+		"url": "https://github.com/easyeda/eext-chat-with-ai-kimi"
 	},
 	"categories": "Other",
-	"keywords": ["AI"],
+	"keywords": ["ai", "chatbot", "component-query", "netlist"],
 	"images": {
 		"logo": "./images/logo.png",
 		"banner": "./images/banner.png"

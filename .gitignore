@@ -6,3 +6,5 @@
 /node_modules/
 /.eslintcache
 debug.log
+/.claude
+CLAUDE.md
