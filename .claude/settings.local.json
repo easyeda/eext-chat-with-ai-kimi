@@ -1,5 +1,11 @@
 {
 	"permissions": {
-		"allow": ["WebFetch(domain:prodocs.lceda.cn)"]
+		"allow": [
+			"WebFetch(domain:prodocs.lceda.cn)",
+			"Bash(sed -i \"867s|const isVisionModel = currentModel.includes\\('vision-preview'\\);|const isVisionModel = currentModel.includes\\('vision-preview'\\) || currentModel === 'kimi-k2.6' || currentModel === 'kimi-k2.5';|\" iframe/index.html)",
+			"Bash(sed -i \"871s|modelSelect.value = 'moonshot-v1-8k-vision-preview';|modelSelect.value = 'kimi-k2.6';|\" iframe/index.html)",
+			"Bash(sed -i \"875s|已自动切换到8K视觉模型以支持图片分析|已自动切换到 kimi-k2.6 以支持图片分析|\" iframe/index.html)",
+			"Bash(node -e ' *)"
+		]
 	}
 }

@@ -62,14 +62,8 @@
 				<div class="input-group">
 					<label for="model-select">选择模型</label>
 					<select id="model-select" class="modern-input">
-						<option value="kimi-k2-0905-preview">kimi-k2-0905-preview</option>
-						<option value="kimi-k2-turbo-preview">kimi-k2-turbo-preview</option>
-						<option value="moonshot-v1-8k">moonshot-v1-8k</option>
-						<option value="moonshot-v1-32k">moonshot-v1-32k</option>
-						<option value="moonshot-v1-128k">moonshot-v1-128k</option>
-						<option value="moonshot-v1-8k-vision-preview">moonshot-v1-8k-vision-preview</option>
-						<option value="moonshot-v1-32k-vision-preview">moonshot-v1-32k-vision-preview</option>
-						<option value="moonshot-v1-128k-vision-preview">moonshot-v1-128k-vision-preview</option>
+						<option value="kimi-k2.6">kimi-k2.6</option>
+						<option value="kimi-k2.5">kimi-k2.5</option>
 					</select>
 				</div>
 
@@ -116,7 +110,11 @@
 					apiKeyInput.value = storedKey;
 				}
 				if (storedModel) {
-					modelSelect.value = storedModel;
+					// 验证存储的模型是否在可选列表中
+					const validModels = ['kimi-k2.6', 'kimi-k2.5'];
+					if (validModels.includes(storedModel)) {
+						modelSelect.value = storedModel;
+					}
 				}
 
 				// 打开配置面板
@@ -151,7 +149,7 @@
 
 				// 设置默认模型为 Kimi 文本模型（支持网表分析）
 				if (!storedModel) {
-					const defaultModel = 'kimi-k2-0905-preview';
+					const defaultModel = 'kimi-k2.5';
 					modelSelect.value = defaultModel;
 					eda.sys_Storage.setExtensionUserConfig('Model', defaultModel);
 				}
@@ -160,18 +158,8 @@
 				modelSelect.addEventListener('change', () => {
 					const selectedModel = modelSelect.value;
 
-					// 如果选中的模型是视觉模型，则显示上传图片按钮
-					const isVisionModel = selectedModel.includes('vision-preview');
-					uploadImageButton.style.display = isVisionModel ? 'block' : 'none';
-
-					// 检查是否支持网表分析功能
-					const supportsNetlistAnalysis =
-						selectedModel.includes('32k') ||
-						selectedModel.includes('128k') ||
-						selectedModel === 'kimi-k2-0905-preview' ||
-						selectedModel === 'kimi-k2-turbo-preview';
-					parseNetlistButton.style.display = supportsNetlistAnalysis ? 'block' : 'none';
-					parseNetlistButton.title = supportsNetlistAnalysis ? '分析网表' : '网表分析功能仅在32k和128k模型中可用';
+					uploadImageButton.style.display = 'block';
+					parseNetlistButton.style.display = 'block';
 
 					eda.sys_Storage.setExtensionUserConfig('Model', selectedModel);
 				});
@@ -244,7 +232,7 @@
 								JSON.stringify({
 									model: modelSelect.value,
 									messages: limitedMessages, // 合并系统消息和对话历史
-									temperature: 0.3,
+									temperature: 1,
 									stream: true,
 								}),
 								{
@@ -448,19 +436,6 @@
 				 */
 				async function parseNetlist() {
 					try {
-						// 检查当前模型是否支持网表分析
-						const selectedModel = modelSelect.value;
-						const supportsNetlistAnalysis =
-							selectedModel.includes('32k') ||
-							selectedModel.includes('128k') ||
-							selectedModel === 'kimi-k2-0905-preview' ||
-							selectedModel === 'kimi-k2-turbo-preview';
-
-						if (!supportsNetlistAnalysis) {
-							eda.sys_ToastMessage.showMessage(`当前模型不支持网表分析，请切换到支持的模型`, 1);
-							return;
-						}
-
 						// 如果API地址或密钥未填写，提示用户
 						if (apiUrlInput.value === '' || apiKeyInput.value === '') {
 							eda.sys_ToastMessage.showMessage(`请填写URL和Key`, 1);
@@ -563,7 +538,7 @@
 							JSON.stringify({
 								model: modelSelect.value,
 								messages: limitedMessages,
-								temperature: 0.3,
+								temperature: 1,
 								stream: true,
 							}),
 							{
@@ -739,7 +714,7 @@
 								JSON.stringify({
 									model: modelSelect.value,
 									messages: limitedMessages, // 合并系统消息和对话历史
-									temperature: 0.3,
+									temperature: 1,
 									stream: true,
 								}),
 								{
@@ -860,18 +835,6 @@
 									const file = item.getAsFile(); // 将图片转换为文件对象
 
 									if (file) {
-										// 检查当前模型是否为视觉模型
-										const currentModel = modelSelect.value;
-										const isVisionModel = currentModel.includes('vision-preview');
-
-										if (!isVisionModel) {
-											// 如果当前不是视觉模型，自动切换到8K视觉模型
-											modelSelect.value = 'moonshot-v1-8k-vision-preview';
-											// 触发模型选择变化事件
-											modelSelect.dispatchEvent(new Event('change'));
-											// 显示提示信息
-											eda.sys_ToastMessage.showMessage('已自动切换到8K视觉模型以支持图片分析', 1);
-										}
 										const reader = new FileReader();
 										reader.onload = async (event) => {
 											const imageBase64 = event.target.result;
@@ -943,7 +906,7 @@
 												JSON.stringify({
 													model: modelSelect.value,
 													messages: limitedMessages, // 合并系统消息和对话历史
-													temperature: 0.3,
+													temperature: 1,
 													stream: true,
 												}),
 												{

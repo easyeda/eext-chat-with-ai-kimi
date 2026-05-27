@@ -68,6 +68,4 @@ Type definitions are provided by `@jlceda/pro-api-types` package.
 
 The extension supports Moonshot/Kimi API models:
 
--   `kimi-k2-0905-preview`, `kimi-k2-turbo-preview` - Latest K2 models
--   `moonshot-v1-8k/32k/128k` - Text models (32k/128k support netlist analysis)
--   `moonshot-v1-*-vision-preview` - Vision models for circuit image analysis
+-   `kimi-k2.6`, `kimi-k2.5` - Latest multimodal models (256k context, support vision and netlist analysis)

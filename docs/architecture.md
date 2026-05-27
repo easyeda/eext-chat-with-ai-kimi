@@ -92,7 +92,7 @@ AI助手Kimi 是一款集成在嘉立创EDA专业版中的 AI 对话工具。用
 -   对话历史：内存数组 `messages`，限制上下文为最新 20 条
 -   错误展示：`displayError()` 将错误信息以红色气泡显示在对话框中，包含 HTTP 状态码和具体原因，替代原先仅在控制台输出的方式
 -   系统提示词：文本模型和视觉模型使用不同的 system prompt
--   支持的模型：kimi-k2-0905-preview、kimi-k2-turbo-preview、moonshot-v1-8k/32k/128k（含 vision-preview 变体）
+-   支持的模型：kimi-k2.6、kimi-k2.5
 
 ---
 
