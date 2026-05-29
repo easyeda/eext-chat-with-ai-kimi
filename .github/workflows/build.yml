@@ -3,9 +3,9 @@ name: Build and Release
 on:
   push:
     branches:
-      - main # main 分支触发
-      - master # master 分支触发
-  workflow_dispatch: # 手动触发
+      - main
+      - master
+  workflow_dispatch:
 
 jobs:
   build-and-release:
@@ -14,7 +14,7 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 检查已有tag
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -59,39 +59,172 @@ jobs:
           VERSION=${{ env.VERSION }}
           EEXTNAME=${{ env.EEXTNAME }}
           echo "🔎 Extracting changelog for version $VERSION from CHANGELOG.md"
-          # 转义版本号中的点号，避免正则误匹配
           ESCAPED_VERSION=$(echo "$VERSION" | sed 's/\./\\./g')
-          # 精确匹配版本号（支持 ## [1.4.1] / ## 1.4.1 / ## v1.4.1 / ## 1.4.1 (2026-04-29) 等格式）
-          NOTES=$(awk "/^## \[?v?${ESCAPED_VERSION}\]?([[:space:]]|$)/ {flag=1; next} /^## / {if(flag) exit} flag" CHANGELOG.md)
-          # 去除首尾空行
-          NOTES=$(echo "$NOTES" | sed '/./,$!d' | sed -e :a -e '/^\n*$/{$d;N;ba}')
 
-          if [ -z "$(echo "$NOTES" | tr -d '[:space:]')" ]; then
-            echo "⚠️ CHANGELOG.md 中未找到版本 $VERSION 的记录，使用默认说明"
-            NOTES="Release v${VERSION}"
+          if [ -f ]; then
+            # 支持多种 CHANGELOG 格式（兼容大小写 V）：
+            # - # v1.5.3 或 # V1.5.3 或 # 1.5.3
+            # - ## v1.5.3 或 ## V1.5.3 或 ## 1.5.3
+            # - ## [1.5.3] - 2024-01-01 或 ## [v1.5.3]
+            NOTES=$(awk '
+              BEGIN { found=0 }
+              # 匹配版本行（兼容大小写 v/V）
+              /^(#|##) \[?[vV]?'"$ESCAPED_VERSION"'\]?([[:space:]-]|$)/ {
+                if (found) exit
+                found=1
+                next
+              }
+              # 遇到下一个版本标题时停止
+              /^(#|##) \[?[vV]?[0-9]+\.[0-9]+\.[0-9]+\]?([[:space:]-]|$)/ {
+                if (found) exit
+              }
+              # 遇到一级标题（如"更新日志"、"Changelog"、"修改记录"）时停止
+              /^# [^[\-0-9]/ {
+                if (found) exit
+              }
+              found { print }
+            ' CHANGELOG.md)
+
+            # 清理空行
+            NOTES=$(echo "$NOTES" | sed '/^[[:space:]]*$/d' | sed '1{/^$/d}')
+
+            if [ -z "$NOTES" ]; then
+              echo "⚠️ CHANGELOG.md 中未找到版本 $VERSION 的记录，使用默认说明"
+              NOTES="Release v${VERSION}"
+            else
+              echo "✅ 已从 CHANGELOG.md 中提取版本 $VERSION 的更新日志"
+            fi
           else
-            echo "✅ 已从 CHANGELOG.md 中提取版本 $VERSION 的更新日志"
+            echo "⚠️ 未找到 CHANGELOG.md 文件，使用默认说明"
+            NOTES="Release v${VERSION}"
           fi
 
-          NOTES="$NOTES\n\n---\n由GitHub Actions自动构建并发布\nBuilt and released automatically by GitHub Actions\n\n也可前往[嘉立创EDA扩展广场](https://ext.lceda.cn/item/oshwhub/${EEXTNAME})下载\nAlso available at [JLCEDA Extension Plaza](https://ext.lceda.cn/item/oshwhub/${EEXTNAME})"
+          # 添加页脚
+          NOTES="${NOTES}
 
+          ---
+          由GitHub Actions自动构建并发布
+          Built and released automatically by GitHub Actions
+
+          也可前往[嘉立创EDA扩展广场](https://jlc-ext.com/item/oshwhub/${EEXTNAME})下载
+          Also available at [JLCEDA Extension Plaza](https://jlcext.com/item/oshwlab/${EEXTNAME})"
+
+          # 使用 EOF 分隔符设置多行环境变量
           echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
-          echo -e "$NOTES" >> $GITHUB_ENV
+          echo "$NOTES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
+
           echo "------ Release Notes ------"
-          echo -e "$NOTES"
+          echo "$NOTES"
           echo "---------------------------"
 
-      - name: Debug check artifact
+      - name: Build zh-cn package
         if: env.SKIP_RELEASE == 'false'
         run: |
           VERSION=${{ env.VERSION }}
           EEXTNAME=${{ env.EEXTNAME }}
-          FILE="build/dist/${EEXTNAME}_v${VERSION}.eext"
-          if [ -f "$FILE" ]; then
-            echo "✅ 产物存在: $FILE"
+          DIST_DIR="build/dist"
+          BASE_FILE="${DIST_DIR}/${EEXTNAME}_v${VERSION}.eext"
+          ZH_FILE="${DIST_DIR}/${EEXTNAME}_v${VERSION}_zh-cn.eext"
+
+          echo "Building zh-cn package..."
+
+          # Find zh README
+          ZH_README=""
+          if [ -f "README_zh.md" ]; then
+            ZH_README="README_zh.md"
+          elif [ -f "README.zh.md" ]; then
+            ZH_README="README.zh.md"
           else
-            echo "❌ 未发现产物: $FILE"
+            ZH_README=$(ls README_zh-*.md README.zh-*.md 2>/dev/null | head -1)
+          fi
+
+          if [ -z "$ZH_README" ]; then
+            echo "No zh README found, copying base eext as zh-cn"
+            cp "$BASE_FILE" "$ZH_FILE"
+          else
+            echo "Using zh README: $ZH_README"
+            # Backup and swap README.md
+            mv README.md README.md.bak
+            cp "$ZH_README" README.md
+            # Re-package using npm run build
+            npm run build
+            mv "$BASE_FILE" "$ZH_FILE"
+            # Restore original README.md
+            mv README.md.bak README.md
+          fi
+
+          echo "Done: $ZH_FILE"
+
+      - name: Build global package
+        if: env.SKIP_RELEASE == 'false'
+        run: |
+          VERSION=${{ env.VERSION }}
+          EEXTNAME=${{ env.EEXTNAME }}
+          DIST_DIR="build/dist"
+          BASE_FILE="${DIST_DIR}/${EEXTNAME}_v${VERSION}.eext"
+          GLOBAL_FILE="${DIST_DIR}/${EEXTNAME}_v${VERSION}_global.eext"
+
+          echo "Building global package..."
+
+          # Find en README
+          EN_README=""
+          if [ -f "README_en.md" ]; then
+            EN_README="README_en.md"
+          elif [ -f "README.en.md" ]; then
+            EN_README="README.en.md"
+          else
+            EN_README=$(ls README_en-*.md README.en-*.md 2>/dev/null | head -1)
+          fi
+
+          if [ -z "$EN_README" ]; then
+            echo "No en README found, copying base eext as global"
+            cp "$BASE_FILE" "$GLOBAL_FILE"
+          else
+            echo "Using en README: $EN_README"
+            # Backup and swap README.md
+            mv README.md README.md.bak
+            cp "$EN_README" README.md
+            # Re-package using npm run build
+            npm run build
+            mv "$BASE_FILE" "$GLOBAL_FILE"
+            # Restore original README.md
+            mv README.md.bak README.md
+          fi
+
+          echo "Done: $GLOBAL_FILE"
+
+      - name: Cleanup base eext
+        if: env.SKIP_RELEASE == 'false'
+        run: |
+          VERSION=${{ env.VERSION }}
+          EEXTNAME=${{ env.EEXTNAME }}
+          rm -f "build/dist/${EEXTNAME}_v${VERSION}.eext"
+          echo "Removed base eext"
+
+      - name: Debug check artifacts
+        if: env.SKIP_RELEASE == 'false'
+        run: |
+          VERSION=${{ env.VERSION }}
+          EEXTNAME=${{ env.EEXTNAME }}
+          DIST_DIR="build/dist"
+          ZH_FILE="${DIST_DIR}/${EEXTNAME}_v${VERSION}_zh-cn.eext"
+          GLOBAL_FILE="${DIST_DIR}/${EEXTNAME}_v${VERSION}_global.eext"
+
+          echo "🔍 检查构建产物..."
+
+          if [ -f "$ZH_FILE" ]; then
+            echo "✅ 中文版产物存在: $ZH_FILE"
+          else
+            echo "❌ 中文版产物不存在: $ZH_FILE"
+            ls -R build || true
+            exit 1
+          fi
+
+          if [ -f "$GLOBAL_FILE" ]; then
+            echo "✅ 国际版产物存在: $GLOBAL_FILE"
+          else
+            echo "❌ 国际版产物不存在: $GLOBAL_FILE"
             ls -R build || true
             exit 1
           fi
@@ -103,6 +236,8 @@ jobs:
           tag_name: v${{ env.VERSION }}
           name: Release v${{ env.VERSION }}
           body: ${{ env.RELEASE_NOTES }}
-          files: build/dist/${{ env.EEXTNAME }}_v${{ env.VERSION }}.eext
+          files: |
+            build/dist/${{ env.EEXTNAME }}_v${{ env.VERSION }}_zh-cn.eext
+            build/dist/${{ env.EEXTNAME }}_v${{ env.VERSION }}_global.eext
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
