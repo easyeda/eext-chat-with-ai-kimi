@@ -14,6 +14,7 @@
 	"api_key": "API密钥",
 	"enter_api_key": "请输入API Key",
 	"how_to_get_api_credentials": "如何获取API凭证",
+	"upload_image_tooltip": "点击上传原理图或 PCB 的图片",
 	"please_fill_url_and_key": "请填写URL和Key",
 	"click_component_in_schematic": "请左键单击原理图中需查询的元件",
 	"introduce_component_function": "请介绍 ${1} 的功能及应用场景",

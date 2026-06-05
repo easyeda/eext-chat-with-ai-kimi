@@ -14,6 +14,7 @@
 	"api_key": "API Key",
 	"enter_api_key": "Enter your API Key",
 	"how_to_get_api_credentials": "How to get API credentials",
+	"upload_image_tooltip": "Click to upload schematic or PCB image",
 	"please_fill_url_and_key": "Please fill in URL and Key",
 	"click_component_in_schematic": "Please left-click the component to query in the schematic",
 	"introduce_component_function": "Please introduce the functions and application scenarios of ${1}",
