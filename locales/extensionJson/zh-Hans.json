@@ -2,5 +2,9 @@
 	"AI助手Kimi": "AI助手Kimi",
 	"通过设置 Kimi 的自定义 URL 和 Key 后进行AI对话，支持查询元件和解析网表": "通过设置 Kimi 的自定义 URL 和 Key 后进行AI对话，支持查询元件和解析网表",
 	"Kimi": "Kimi",
-	"关于...": "关于..."
+	"关于...": "关于...",
+	"ai": "ai",
+	"chatbot": "chatbot",
+	"component-query": "component-query",
+	"netlist": "netlist"
 }

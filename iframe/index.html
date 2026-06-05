@@ -4,7 +4,7 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<link rel="stylesheet" href="/iframe/style.css" />
-		<title>Kimi AI助手</title>
+		<title>Kimi AI Assistant</title>
 	</head>
 	<body>
 		<!-- 聊天窗口容器 -->
@@ -16,16 +16,16 @@
 			<div class="button-group">
 				<div class="function-buttons">
 					<button id="greet-button" class="button-style" title="选择需查询的元件">
-						<span>查询元件</span>
+						<span id="greet-button-text">查询元件</span>
 					</button>
 					<button id="similar-button" class="button-style" title="选择需查询的元件">
-						<span>相似物料</span>
+						<span id="similar-button-text">相似物料</span>
 					</button>
 					<button id="parse-netlist-button" class="button-style">
-						<span>分析网表</span>
+						<span id="parse-netlist-button-text">分析网表</span>
 					</button>
 					<button id="upload-image-button" class="button-style" style="display: none" title="点击上传原理图或 PCB 的图片">
-						<span>分析电路</span>
+						<span id="upload-image-button-text">分析电路</span>
 					</button>
 				</div>
 
@@ -53,14 +53,14 @@
 		<div class="config-panel">
 			<!-- 配置面板头部 -->
 			<div class="config-header">
-				<h3>API 设置</h3>
+				<h3 id="config-title">API 设置</h3>
 				<!-- 关闭按钮 -->
 				<button class="close-btn">&times;</button>
 			</div>
 			<!-- 配置面板内容 -->
 			<div class="config-content">
 				<div class="input-group">
-					<label for="model-select">选择模型</label>
+					<label for="model-select" id="model-select-label">选择模型</label>
 					<select id="model-select" class="modern-input">
 						<option value="kimi-k2.6">kimi-k2.6</option>
 						<option value="kimi-k2.5">kimi-k2.5</option>
@@ -68,22 +68,28 @@
 				</div>
 
 				<div class="input-group">
-					<label for="api-url-input">接口地址</label>
+					<label for="api-url-input" id="api-url-label">接口地址</label>
 					<input type="text" id="api-url-input" class="modern-input" value="https://api.moonshot.cn/v1/chat/completions" />
 				</div>
 				<!-- API密钥输入组 -->
 				<div class="input-group">
-					<label for="api-key-input">API密钥</label>
+					<label for="api-key-input" id="api-key-label">API密钥</label>
 					<input type="text" id="api-key-input" class="modern-input" placeholder="请输入API Key" />
 				</div>
 				<!-- 获取API凭证链接 -->
 				<a href="https://lceda001.feishu.cn/wiki/V9ScwIjk0iBc8fk9RhWcork9nGc?from=from_copylink" class="tutorial-link" target="_blank">
-					<span class="help-icon">?</span> 如何获取API凭证
+					<span class="help-icon">?</span> <span id="api-tutorial-text">如何获取API凭证</span>
 				</a>
 			</div>
 		</div>
 
 		<script>
+			var edaObj = (typeof eda !== 'undefined') ? eda : (window.parent && window.parent.eda);
+			function t(tag, ...args) {
+				if (edaObj && edaObj.sys_I18n) return edaObj.sys_I18n.text(tag, undefined, undefined, ...args);
+				return tag;
+			}
+
 			document.addEventListener('DOMContentLoaded', async () => {
 				// 获取页面元素
 				const chatContainer = document.getElementById('chat-container');
@@ -96,6 +102,23 @@
 				const parseNetlistButton = document.getElementById('parse-netlist-button');
 				const modelSelect = document.getElementById('model-select');
 				const uploadImageButton = document.getElementById('upload-image-button');
+
+				// Apply i18n to HTML elements
+				document.title = t('page_title');
+				messageInput.placeholder = t('input_placeholder');
+				document.getElementById('greet-button-text').textContent = t('query_component');
+				document.getElementById('greet-button').title = t('select_component_tooltip');
+				document.getElementById('similar-button-text').textContent = t('similar_materials');
+				document.getElementById('similar-button').title = t('select_component_tooltip');
+				document.getElementById('parse-netlist-button-text').textContent = t('analyze_netlist');
+				document.getElementById('upload-image-button-text').textContent = t('analyze_circuit');
+				document.getElementById('upload-image-button').title = t('upload_image_tooltip');
+				document.getElementById('config-title').textContent = t('api_settings');
+				document.getElementById('model-select-label').textContent = t('select_model');
+				document.getElementById('api-url-label').textContent = t('api_url');
+				document.getElementById('api-key-label').textContent = t('api_key');
+				apiKeyInput.placeholder = t('enter_api_key');
+				document.getElementById('api-tutorial-text').textContent = t('how_to_get_api_credentials');
 
 				// 读取本地存储的API配置
 				const storedKey = eda.sys_Storage.getExtensionUserConfig('Key');
@@ -209,7 +232,7 @@
 
 							// 如果API地址或密钥未填写，提示用户
 							if (apiUrlInput.value === '' || apiKeyInput.value === '') {
-								eda.sys_ToastMessage.showMessage(`请填写URL和Key`, 1);
+								eda.sys_ToastMessage.showMessage(t('please_fill_url_and_key'), 1);
 								return;
 							}
 
@@ -321,7 +344,7 @@
 						}
 					} catch (error) {
 						console.error('Upload failed:', error);
-						displayError(`发送失败：请检查外部交互是否开启（${error.message || error}）`);
+						displayError(t('send_failed', error.message || error));
 					}
 				}
 
@@ -382,7 +405,7 @@
 				 */
 				async function sendGreeting() {
 					// 监听元件选择事件
-					eda.sys_ToastMessage.showMessage(`请左键单击原理图中需查询的元件`, 3);
+					eda.sys_ToastMessage.showMessage(t('click_component_in_schematic'), 3);
 					eda.sch_Event.addMouseEventListener(
 						'sendGreeting',
 						'selected',
@@ -394,7 +417,7 @@
 									// 获取元件名称，去掉后缀 ".1"
 									const newStr = component.subPartName.split('.');
 									newStr.pop();
-									const message = `请介绍 ${newStr.join('.')} 的功能及应用场景`;
+									const message = t('introduce_component_function', newStr.join('.'));
 									messageInput.value = message;
 									sendMessage({ preventDefault: () => {} });
 								}
@@ -409,7 +432,7 @@
 				 */
 				async function similarGreeting() {
 					// 监听元件选择事件
-					eda.sys_ToastMessage.showMessage(`请左键单击原理图中需查询的元件`, 3);
+					eda.sys_ToastMessage.showMessage(t('click_component_in_schematic'), 3);
 					eda.sch_Event.addMouseEventListener(
 						'similarGreeting',
 						'selected',
@@ -421,7 +444,7 @@
 									// 获取元件名称，去掉后缀 ".1"
 									const newStr = component.subPartName.split('.');
 									newStr.pop();
-									const message = `请介绍 ${newStr.join('.')} 的相似物料`;
+									const message = t('introduce_similar_materials', newStr.join('.'));
 									messageInput.value = message;
 									sendMessage({ preventDefault: () => {} });
 								}
@@ -438,16 +461,16 @@
 					try {
 						// 如果API地址或密钥未填写，提示用户
 						if (apiUrlInput.value === '' || apiKeyInput.value === '') {
-							eda.sys_ToastMessage.showMessage(`请填写URL和Key`, 1);
+							eda.sys_ToastMessage.showMessage(t('please_fill_url_and_key'), 1);
 							return;
 						}
 
-						eda.sys_ToastMessage.showMessage(`正在获取网表数据...`, 3);
+						eda.sys_ToastMessage.showMessage(t('fetching_netlist_data'), 3);
 
 						const netlistString = await eda.sch_Netlist.getNetlist('JLCEDA');
 
 						if (!netlistString) {
-							eda.sys_ToastMessage.showMessage(`获取网表失败，请确保已打开原理图`, 1);
+							eda.sys_ToastMessage.showMessage(t('netlist_fetch_failed'), 1);
 							return;
 						}
 
@@ -495,12 +518,12 @@
 							}
 
 							// 构建精简的网表描述
-							simplifiedNetlist = `器件列表:\n${components
+							simplifiedNetlist = `${t('component_list')}:\n${components
 								.map(
 									(comp) =>
 										`${comp.designator}: ${comp.name || ''}${comp.value ? ` (${comp.value})` : ''}${comp.description ? ` - ${comp.description.substring(0, 50)}...` : ''}`,
 								)
-								.join('\n')}\n\n连接关系:\n${connections.map((conn) => `${conn.component}.${conn.pin} -> ${conn.net}`).join('\n')}`;
+								.join('\n')}\n\n${t('connections')}:\n${connections.map((conn) => `${conn.component}.${conn.pin} -> ${conn.net}`).join('\n')}`;
 
 							console.log('精简后的网表信息:', simplifiedNetlist);
 						} catch (error) {
@@ -511,11 +534,11 @@
 						}
 
 						// 显示用户消息
-						const userDisplayMessage = '请分析当前原理图的网表内容';
+						const userDisplayMessage = t('analyze_netlist_message');
 						displayMessage(userDisplayMessage, null, true);
 
 						// 构造完整的用户消息（包含网表内容）
-						const fullUserMessage = `以下是电路原理图的网表内容：\n\`\`\`\n${simplifiedNetlist}\n\`\`\`\n请仔细分析后告诉我整体电路的功能、特点以及可能存在的问题。`;
+						const fullUserMessage = t('full_netlist_analysis_message').replace('${1}', simplifiedNetlist);
 
 						// 添加到对话历史
 						messages.push({
@@ -622,7 +645,7 @@
 						isStreaming = false;
 					} catch (error) {
 						console.error('网表分析失败:', error);
-						displayError(`网表分析失败：请检查是否已打开原理图（${error.message || error}）`);
+						displayError(t('netlist_analysis_failed', error.message || error));
 					}
 				}
 
@@ -649,7 +672,7 @@
 							const imageUrl = `data:image/${file.type};base64,${imageBase64.split(',')[1]}`;
 
 							// 构造视觉模型请求
-							const message = '\n请根据图片分析电路';
+							const message = '\n' + t('analyze_circuit_from_image');
 							const visionMessage = {
 								role: 'user',
 								content: [
@@ -691,7 +714,7 @@
 
 							// 如果API地址或密钥未填写，提示用户
 							if (apiUrlInput.value === '' || apiKeyInput.value === '') {
-								eda.sys_ToastMessage.showMessage(`请填写URL和Key`, 1);
+								eda.sys_ToastMessage.showMessage(t('please_fill_url_and_key'), 1);
 								return;
 							}
 
@@ -841,7 +864,7 @@
 											const imageUrl = `data:${file.type};base64,${imageBase64.split(',')[1]}`;
 
 											// 构造视觉模型请求
-											const message = '\n请根据图片分析电路';
+											const message = '\n' + t('analyze_circuit_from_image');
 											const visionMessage = {
 												role: 'user',
 												content: [
@@ -883,7 +906,7 @@
 
 											// 如果API地址或密钥未填写，提示用户
 											if (apiUrlInput.value === '' || apiKeyInput.value === '') {
-												eda.sys_ToastMessage.showMessage(`请填写URL和Key`, 1);
+												eda.sys_ToastMessage.showMessage(t('please_fill_url_and_key'), 1);
 												return;
 											}
 
@@ -1008,7 +1031,7 @@
 						// 如果没有图片，允许默认的文本粘贴行为
 					} catch (error) {
 						console.error('粘贴处理失败:', error);
-						displayError(`粘贴处理失败：${error.message || error}`);
+						displayError(t('paste_failed', error.message || error));
 					}
 				});
 
