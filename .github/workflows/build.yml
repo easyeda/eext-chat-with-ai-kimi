@@ -7,6 +7,9 @@ on:
       - master
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
@@ -168,9 +171,9 @@ jobs:
                 echo "Swapping extension.json with zh-Hans translations..."
                 TMP_EXT=$(mktemp)
                 jq --slurpfile i18n "$ZH_I18N" '
-                  (if .displayName then (.displayName as $orig | if $i18n[0][$orig] then .displayName = $i18n[0][$orig] else . end) else . end) |
-                  (if .description then (.description as $orig | if $i18n[0][$orig] then .description = $i18n[0][$orig] else . end) else . end) |
-                  (if .keywords then .keywords = [.keywords[] | (if . as $k | $i18n[0][$k] then $i18n[0][.] else . end)] else . end)
+                  (if .displayName then .displayName = ($i18n[0].displayName // $i18n[0][.displayName] // .displayName) else . end) |
+                  (if .description then .description = ($i18n[0].description // $i18n[0][.description] // .description) else . end) |
+                  (if .keywords then .keywords = [.keywords[] | ($i18n[0][.] // .)] else . end)
                 ' extension.json > "$TMP_EXT" && mv "$TMP_EXT" extension.json
                 echo "extension.json swapped to zh-Hans"
               fi
@@ -212,12 +215,14 @@ jobs:
           else
             # README.md is Chinese, find en and swap
             EN_README=""
-            if [ -f "README_en.md" ]; then
+            if [ -f "README_EN.md" ]; then
+              EN_README="README_EN.md"
+            elif [ -f "README_en.md" ]; then
               EN_README="README_en.md"
             elif [ -f "README.en.md" ]; then
               EN_README="README.en.md"
             else
-              EN_README=$(ls README_en-*.md README.en-*.md 2>/dev/null | head -1)
+              EN_README=$(ls README_EN-*.md README_en-*.md README.en-*.md README.En-*.md 2>/dev/null | head -1)
             fi
 
             if [ -z "$EN_README" ]; then
@@ -235,9 +240,9 @@ jobs:
                 echo "Swapping extension.json with en translations..."
                 TMP_EXT=$(mktemp)
                 jq --slurpfile i18n "$EN_I18N" '
-                  (if .displayName then (.displayName as $orig | if $i18n[0][$orig] then .displayName = $i18n[0][$orig] else . end) else . end) |
-                  (if .description then (.description as $orig | if $i18n[0][$orig] then .description = $i18n[0][$orig] else . end) else . end) |
-                  (if .keywords then .keywords = [.keywords[] | (if . as $k | $i18n[0][$k] then $i18n[0][.] else . end)] else . end)
+                  (if .displayName then .displayName = ($i18n[0].displayName // $i18n[0][.displayName] // .displayName) else . end) |
+                  (if .description then .description = ($i18n[0].description // $i18n[0][.description] // .description) else . end) |
+                  (if .keywords then .keywords = [.keywords[] | ($i18n[0][.] // .)] else . end)
                 ' extension.json > "$TMP_EXT" && mv "$TMP_EXT" extension.json
                 echo "extension.json swapped to en"
               fi
