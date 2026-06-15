@@ -161,9 +161,24 @@ jobs:
               mv README.md README.en.md
               cp "$ZH_README" README.md
               find . -name "*.md" -not -path "./build/*" -not -path "./node_modules/*" -not -path "./.git/*" -exec sed -i 's/README\.md/README.en.md/g' {} +
+
+              # Swap extension.json fields with zh-Hans translations
+              ZH_I18N="locales/extensionJson/zh-Hans.json"
+              if [ -f "$ZH_I18N" ]; then
+                echo "Swapping extension.json with zh-Hans translations..."
+                TMP_EXT=$(mktemp)
+                jq --slurpfile i18n "$ZH_I18N" '
+                  (if .displayName then (.displayName as $orig | if $i18n[0][$orig] then .displayName = $i18n[0][$orig] else . end) else . end) |
+                  (if .description then (.description as $orig | if $i18n[0][$orig] then .description = $i18n[0][$orig] else . end) else . end) |
+                  (if .keywords then .keywords = [.keywords[] | (if . as $k | $i18n[0][$k] then $i18n[0][.] else . end)] else . end)
+                ' extension.json > "$TMP_EXT" && mv "$TMP_EXT" extension.json
+                echo "extension.json swapped to zh-Hans"
+              fi
+
               npm run build
               mv "$BASE_FILE" "$ZH_FILE"
               git checkout -- "*.md" 2>/dev/null || true
+              git checkout -- extension.json 2>/dev/null || true
               rm -f README.en.md 2>/dev/null || true
             fi
           fi
@@ -213,9 +228,24 @@ jobs:
               mv README.md README.zh.md
               cp "$EN_README" README.md
               find . -name "*.md" -not -path "./build/*" -not -path "./node_modules/*" -not -path "./.git/*" -exec sed -i 's/README\.md/README.zh.md/g' {} +
+
+              # Swap extension.json fields with en translations
+              EN_I18N="locales/extensionJson/en.json"
+              if [ -f "$EN_I18N" ]; then
+                echo "Swapping extension.json with en translations..."
+                TMP_EXT=$(mktemp)
+                jq --slurpfile i18n "$EN_I18N" '
+                  (if .displayName then (.displayName as $orig | if $i18n[0][$orig] then .displayName = $i18n[0][$orig] else . end) else . end) |
+                  (if .description then (.description as $orig | if $i18n[0][$orig] then .description = $i18n[0][$orig] else . end) else . end) |
+                  (if .keywords then .keywords = [.keywords[] | (if . as $k | $i18n[0][$k] then $i18n[0][.] else . end)] else . end)
+                ' extension.json > "$TMP_EXT" && mv "$TMP_EXT" extension.json
+                echo "extension.json swapped to en"
+              fi
+
               npm run build
               mv "$BASE_FILE" "$GLOBAL_FILE"
               git checkout -- "*.md" 2>/dev/null || true
+              git checkout -- extension.json 2>/dev/null || true
               rm -f README.zh.md 2>/dev/null || true
             fi
           fi
