@@ -3,15 +3,18 @@ body {
 	font-family: Arial, sans-serif;
 	background: white;
 	max-width: 460px;
+	width: 100%;
 	margin: 0 auto;
+	box-sizing: border-box;
 }
 
 /* ================= 聊天消息容器 ================= */
 #chat-container {
 	background-color: rgb(220, 222, 252);
-	width: 440px;
+	width: calc(100% - 20px);
 	height: 420px;
 	margin-left: 10px;
+	margin-right: 10px;
 	margin-top: 5px;
 	padding-top: 10px;
 	border-radius: 8px;
@@ -21,6 +24,7 @@ body {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
+	box-sizing: border-box;
 }
 
 /* ================= 消息气泡优化 ================= */
@@ -48,15 +52,17 @@ body {
 /* ================= 输入区域优化 ================= */
 .input-container {
 	position: relative;
-	width: 460px;
-	margin-top: 10px;
+	width: calc(100% - 20px);
+	max-width: 440px;
+	margin: 10px auto 0;
 	border: 2px solid #e5e7eb;
 	border-radius: 12px;
-	padding-bottom: 50px;
+	padding-bottom: 56px;
+	box-sizing: border-box;
 }
 
 #message-input {
-	width: 428px;
+	width: 100%;
 	min-height: 50px;
 	padding: 12px 16px;
 	border: none;
@@ -67,6 +73,7 @@ body {
 	transition: all 0.3s ease;
 	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 	resize: none;
+	box-sizing: border-box;
 }
 
 #message-input:focus {
@@ -83,15 +90,22 @@ body {
 	right: 8px;
 	display: flex;
 	justify-content: space-between;
-	align-items: center;
-	gap: 8px;
+	align-items: flex-end;
+	gap: 6px;
 	padding: 0;
+	overflow: hidden;
 }
 
 .function-buttons {
 	display: flex;
-	gap: 8px;
+	gap: 6px;
 	flex: 1;
+	flex-wrap: wrap;
+	min-width: 0;
+}
+
+.button-group-center {
+	flex-shrink: 0;
 }
 
 /* ================= 按钮样式修复 ================= */
@@ -124,15 +138,19 @@ body {
 	border-radius: 8px;
 	background: #737add; /* 主要颜色 */
 	color: white;
-	padding: 6px 12px;
+	padding: 6px 10px;
 	transition: all 0.2s ease;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 	cursor: pointer;
-	font-size: 13px;
+	font-size: 12px;
 	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	min-width: 0;
+	flex-shrink: 1;
 }
 
 .button-style:hover {
@@ -235,12 +253,13 @@ body {
 
 /* 修复缺失的输入框样式 */
 .modern-input {
-	width: 365px;
+	width: 100%;
 	padding: 10px 14px;
 	border: 2px solid #e5e7eb;
 	border-radius: 8px;
 	font-size: 14px;
 	transition: all 0.3s ease;
+	box-sizing: border-box;
 }
 
 .modern-input:focus {
