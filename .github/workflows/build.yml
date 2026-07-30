@@ -22,13 +22,158 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22' # Node 22+ 对 ESM + ts-node 支持更好
+
+      - name: Detect project module format (CJS/ESM)
+        id: detect_format
+        run: |
+          echo "🔎 检测项目模块格式..."
+
+          # 方法1: 检查 package.json 中的 "type" 字段
+          PKG_TYPE=$(jq -r '.type // empty' package.json 2>/dev/null)
+          echo "package.json type: '${PKG_TYPE}'"
+
+          # 方法2: 检查 tsconfig.json 中的 module 设置
+          TSC_MODULE=""
+          if [ -f "tsconfig.json" ]; then
+            TSC_MODULE=$(jq -r '.compilerOptions.module // empty' tsconfig.json 2>/dev/null | tr '[:upper:]' '[:lower:]')
+            echo "tsconfig.json module: '${TSC_MODULE}'"
+          fi
+
+          # 方法3: 检查 build 脚本是否包含 esbuild/rollup/vite 等 ESM 工具
+          BUILD_SCRIPT=$(jq -r '.scripts.build // empty' package.json 2>/dev/null)
+          echo "build script: '${BUILD_SCRIPT}'"
+
+          # 方法4: 检查源文件是否使用 import/export 语法
+          HAS_IMPORTS=false
+          if ls src/*.ts src/*.js src/**/*.ts src/**/*.js 2>/dev/null | head -5 > /dev/null 2>&1; then
+            if grep -rl "^import\|^export" src/ --include="*.ts" --include="*.js" 2>/dev/null | head -1 > /dev/null 2>&1; then
+              HAS_IMPORTS=true
+            fi
+          fi
+          echo "Has ES module imports: ${HAS_IMPORTS}"
+
+          # 综合判断
+          IS_ESM=false
+
+          # 明确指定为 ESM
+          if [ "$PKG_TYPE" = "module" ]; then
+            IS_ESM=true
+            echo "✅ 检测到 ESM: package.json type=module"
+          # tsconfig 使用 ESM 相关模块设置
+          elif [[ "$TSC_MODULE" == "esnext" || "$TSC_MODULE" == "es2020" || "$TSC_MODULE" == "es2022" || "$TSC_MODULE" == "nodenext" || "$TSC_MODULE" == "node16" ]]; then
+            IS_ESM=true
+            echo "✅ 检测到 ESM: tsconfig module=${TSC_MODULE}"
+          # 使用现代打包工具
+          elif echo "$BUILD_SCRIPT" | grep -qE "esbuild|rollup|vite|tsup|unbuild"; then
+            IS_ESM=true
+            echo "✅ 检测到 ESM: 使用现代打包工具"
+          # 明确指定为 CJS
+          elif [ "$PKG_TYPE" = "commonjs" ]; then
+            IS_ESM=false
+            echo "✅ 检测到 CJS: package.json type=commonjs"
+          # 默认使用 ESModule 语法的源文件视为 ESM
+          elif [ "$HAS_IMPORTS" = "true" ]; then
+            # 进一步检查是否有 tsconfig 中明确设置为 CommonJS
+            if [[ "$TSC_MODULE" == "commonjs" || "$TSC_MODULE" == "umd" || "$TSC_MODULE" == "amd" ]]; then
+              IS_ESM=false
+              echo "✅ 检测到 CJS: tsconfig module=${TSC_MODULE}"
+            else
+              IS_ESM=true
+              echo "✅ 检测到 ESM: 源文件使用 import/export 语法"
+            fi
+          else
+            IS_ESM=false
+            echo "✅ 默认使用 CJS 模式"
+          fi
+
+          echo "IS_ESM=${IS_ESM}" >> $GITHUB_ENV
+          echo "is_esm=${IS_ESM}" >> $GITHUB_OUTPUT
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          if [ "$IS_ESM" = "true" ]; then
+            echo "📦 ESM 项目: 安装依赖并添加 tsx"
+            npm install
+            # ESM 项目需要 tsx 来处理 .ts 文件（ts-node 在 ESM 模式下有兼容问题）
+            npm install -D tsx 2>/dev/null || echo "tsx 安装失败或已存在"
+          else
+            echo "📦 CJS 项目: 使用 npm install"
+            npm install
+          fi
 
       - name: Build project
-        run: npm run build
+        run: |
+          if [ "$IS_ESM" = "true" ]; then
+            echo "🔨 ESM 项目: 执行构建"
+
+            # 检查是否有专门的 esm 构建脚本
+            ESM_BUILD_SCRIPT=$(jq -r '.scripts["build:esm"] // empty' package.json 2>/dev/null)
+            if [ -n "$ESM_BUILD_SCRIPT" ]; then
+              echo "使用 build:esm 脚本"
+              npm run build:esm
+            else
+              echo "使用默认 build 脚本"
+
+              # Node 22+ 对 ESM + ts-node 支持较好，先尝试直接运行
+              if npm run build; then
+                echo "✅ 构建成功"
+              else
+                echo "⚠️ 直接构建失败，尝试使用 tsx 替代 ts-node"
+
+                # 安装 tsx
+                npm install -D tsx 2>/dev/null || true
+
+                # 备份并临时替换 package.json
+                cp package.json package.json.bak
+                jq '(.scripts.compile // "") |= gsub("ts-node"; "tsx") | (.scripts.build // "") |= gsub("ts-node"; "tsx")' package.json > package.json.tmp && mv package.json.tmp package.json
+
+                echo "修改后的构建脚本:"
+                jq '.scripts | {build, compile}' package.json
+
+                # 使用 tsx 执行构建
+                npm run build
+
+                # 恢复原始 package.json
+                mv package.json.bak package.json
+                echo "✅ 使用 tsx 构建完成"
+              fi
+            fi
+          else
+            echo "🔨 CJS 项目: 执行构建"
+            npm run build
+          fi
+
+      - name: Verify build output format
+        id: verify_build
+        run: |
+          echo "🔍 验证构建输出格式..."
+
+          # 检查构建产物目录
+          DIST_DIR="build/dist"
+          if [ ! -d "$DIST_DIR" ]; then
+            echo "⚠️ 构建产物目录不存在: $DIST_DIR"
+            # 尝试其他可能的目录
+            for dir in dist build output; do
+              if [ -d "$dir" ]; then
+                DIST_DIR="$dir"
+                echo "✅ 找到构建目录: $dir"
+                break
+              fi
+            done
+          fi
+
+          # 检查是否有 .mjs 或 .cjs 文件来确认格式
+          if ls "$DIST_DIR"/**/*.mjs 2>/dev/null | head -1 > /dev/null 2>&1; then
+            echo "✅ 确认 ESM 格式输出 (.mjs 文件)"
+            echo "BUILD_FORMAT=esm" >> $GITHUB_OUTPUT
+          elif ls "$DIST_DIR"/**/*.cjs 2>/dev/null | head -1 > /dev/null 2>&1; then
+            echo "✅ 确认 CJS 格式输出 (.cjs 文件)"
+            echo "BUILD_FORMAT=cjs" >> $GITHUB_OUTPUT
+          else
+            echo "ℹ️ 无法从文件扩展名判断格式，使用检测结果"
+            echo "BUILD_FORMAT=$IS_ESM" >> $GITHUB_OUTPUT
+          fi
 
       - name: Get version & extension name from extension.json
         id: meta
@@ -64,7 +209,7 @@ jobs:
           echo "🔎 Extracting changelog for version $VERSION from CHANGELOG.md"
           ESCAPED_VERSION=$(echo "$VERSION" | sed 's/\./\\./g')
 
-          if [ -f ]; then
+          if [ -f "CHANGELOG.md" ]; then
             # 支持多种 CHANGELOG 格式（兼容大小写 V）：
             # - # v1.5.3 或 # V1.5.3 或 # 1.5.3
             # - ## v1.5.3 或 ## V1.5.3 或 ## 1.5.3
@@ -178,7 +323,26 @@ jobs:
                 echo "extension.json swapped to zh-Hans"
               fi
 
-              npm run build
+              # 根据项目格式选择构建命令
+              if [ "$IS_ESM" = "true" ]; then
+                ESM_BUILD_SCRIPT=$(jq -r '.scripts["build:esm"] // empty' package.json 2>/dev/null)
+                if [ -n "$ESM_BUILD_SCRIPT" ]; then
+                  npm run build:esm
+                else
+                  # 先尝试直接运行（Node 22+ 支持较好）
+                  if ! npm run build; then
+                    echo "⚠️ 直接构建失败，使用 tsx 替代"
+                    npm install -D tsx 2>/dev/null || true
+                    cp package.json package.json.bak
+                    jq '(.scripts.compile // "") |= gsub("ts-node"; "tsx") | (.scripts.build // "") |= gsub("ts-node"; "tsx")' package.json > package.json.tmp && mv package.json.tmp package.json
+                    npm run build
+                    mv package.json.bak package.json
+                  fi
+                fi
+              else
+                npm run build
+              fi
+
               mv "$BASE_FILE" "$ZH_FILE"
               git checkout -- "*.md" 2>/dev/null || true
               git checkout -- extension.json 2>/dev/null || true
@@ -247,7 +411,26 @@ jobs:
                 echo "extension.json swapped to en"
               fi
 
-              npm run build
+              # 根据项目格式选择构建命令
+              if [ "$IS_ESM" = "true" ]; then
+                ESM_BUILD_SCRIPT=$(jq -r '.scripts["build:esm"] // empty' package.json 2>/dev/null)
+                if [ -n "$ESM_BUILD_SCRIPT" ]; then
+                  npm run build:esm
+                else
+                  # 先尝试直接运行（Node 22+ 支持较好）
+                  if ! npm run build; then
+                    echo "⚠️ 直接构建失败，使用 tsx 替代"
+                    npm install -D tsx 2>/dev/null || true
+                    cp package.json package.json.bak
+                    jq '(.scripts.compile // "") |= gsub("ts-node"; "tsx") | (.scripts.build // "") |= gsub("ts-node"; "tsx")' package.json > package.json.tmp && mv package.json.tmp package.json
+                    npm run build
+                    mv package.json.bak package.json
+                  fi
+                fi
+              else
+                npm run build
+              fi
+
               mv "$BASE_FILE" "$GLOBAL_FILE"
               git checkout -- "*.md" 2>/dev/null || true
               git checkout -- extension.json 2>/dev/null || true
