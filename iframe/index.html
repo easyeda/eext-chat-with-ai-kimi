@@ -24,7 +24,13 @@
 					<button id="parse-netlist-button" class="button-style">
 						<span id="parse-netlist-button-text" data-i18n="analyze_netlist">分析网表</span>
 					</button>
-					<button id="upload-image-button" class="button-style" style="display: none" title="点击上传原理图或 PCB 的图片" data-i18n-title="upload_image_tooltip">
+					<button
+						id="upload-image-button"
+						class="button-style"
+						style="display: none"
+						title="点击上传原理图或 PCB 的图片"
+						data-i18n-title="upload_image_tooltip"
+					>
 						<span id="upload-image-button-text" data-i18n="analyze_circuit">分析电路</span>
 					</button>
 				</div>
@@ -62,6 +68,7 @@
 				<div class="input-group">
 					<label for="model-select" id="model-select-label" data-i18n="select_model">选择模型</label>
 					<select id="model-select" class="modern-input">
+						<option value="kimi-k3">kimi-k3</option>
 						<option value="kimi-k2.6">kimi-k2.6</option>
 						<option value="kimi-k2.5">kimi-k2.5</option>
 					</select>
@@ -84,7 +91,7 @@
 		</div>
 
 		<script>
-			var edaObj = (typeof eda !== 'undefined') ? eda : (window.parent && window.parent.eda);
+			var edaObj = typeof eda !== 'undefined' ? eda : window.parent && window.parent.eda;
 			function t(tag, ...args) {
 				if (edaObj && edaObj.sys_I18n) return edaObj.sys_I18n.text(tag, undefined, undefined, ...args);
 				return _i18nDict[tag] || tag;
@@ -117,7 +124,7 @@
 				'send_failed': '发送失败：请检查外部交互是否开启（${1}）',
 				'netlist_analysis_failed': '网表分析失败：请检查是否已打开原理图（${1}）',
 				'analyze_circuit_from_image': '请根据图片分析电路',
-				'paste_failed': '粘贴处理失败：${1}'
+				'paste_failed': '粘贴处理失败：${1}',
 			};
 
 			function applyI18n() {
@@ -181,7 +188,7 @@
 				}
 				if (storedModel) {
 					// 验证存储的模型是否在可选列表中
-					const validModels = ['kimi-k2.6', 'kimi-k2.5'];
+					const validModels = ['kimi-k3', 'kimi-k2.6', 'kimi-k2.5'];
 					if (validModels.includes(storedModel)) {
 						modelSelect.value = storedModel;
 					}
@@ -219,7 +226,7 @@
 
 				// 设置默认模型为 Kimi 文本模型（支持网表分析）
 				if (!storedModel) {
-					const defaultModel = 'kimi-k2.5';
+					const defaultModel = 'kimi-k3';
 					modelSelect.value = defaultModel;
 					eda.sys_Storage.setExtensionUserConfig('Model', defaultModel);
 				}
@@ -238,7 +245,7 @@
 
 				// 消息相关变量
 				let id = 0;
-				let reader; // 用于存储流式读取器
+				let activeReader = null; // 当前进行中的流式读取器
 				let isStreaming = false; // 是否正在流式传输
 
 				// 初始化消息存储
@@ -332,13 +339,14 @@
 							}
 
 							const reader = response.body.getReader();
+							activeReader = reader;
 							isStreaming = true;
 
 							sendButton.innerHTML = `<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
 			                <path fill="currentColor" d="M6 6h12v12H6z" />
 			            </svg>`;
 							sendButton.removeEventListener('click', sendMessage);
-							sendButton.addEventListener('click', () => stopStreaming(reader, sendButton));
+							sendButton.addEventListener('click', stopStreaming);
 
 							// 用于拼接流式传输的完整消息
 							let assistantMessage = '';
@@ -385,7 +393,7 @@
 							sendButton.innerHTML = `<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
 			                <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
 			            </svg>`;
-							sendButton.removeEventListener('click', () => stopStreaming(reader, sendButton));
+							sendButton.removeEventListener('click', stopStreaming);
 							sendButton.addEventListener('click', sendMessage);
 							isStreaming = false;
 						}
@@ -396,15 +404,15 @@
 				}
 
 				// 停止流式传输函数
-				function stopStreaming(reader, button) {
-					if (reader) {
-						reader.cancel();
+				function stopStreaming() {
+					if (activeReader) {
+						activeReader.cancel();
+						activeReader = null;
 					}
-					button.innerHTML = `<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
+					isStreaming = false;
+					sendButton.innerHTML = `<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
 			            <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
 			        </svg>`;
-					button.removeEventListener('click', stopStreaming);
-					button.addEventListener('click', sendMessage);
 				}
 
 				// 显示消息函数
@@ -570,7 +578,9 @@
 									(comp) =>
 										`${comp.designator}: ${comp.name || ''}${comp.value ? ` (${comp.value})` : ''}${comp.description ? ` - ${comp.description.substring(0, 50)}...` : ''}`,
 								)
-								.join('\n')}\n\n${t('connections')}:\n${connections.map((conn) => `${conn.component}.${conn.pin} -> ${conn.net}`).join('\n')}`;
+								.join(
+									'\n',
+								)}\n\n${t('connections')}:\n${connections.map((conn) => `${conn.component}.${conn.pin} -> ${conn.net}`).join('\n')}`;
 
 							console.log('精简后的网表信息:', simplifiedNetlist);
 						} catch (error) {
@@ -638,6 +648,7 @@
 						}
 
 						const streamReader = response.body.getReader();
+						activeReader = streamReader;
 						isStreaming = true;
 						id++;
 
@@ -645,7 +656,7 @@
 							<path fill="currentColor" d="M6 6h12v12H6z" />
 						</svg>`;
 						sendButton.removeEventListener('click', sendMessage);
-						sendButton.addEventListener('click', () => stopStreaming(streamReader, sendButton));
+						sendButton.addEventListener('click', stopStreaming);
 
 						let assistantMessage = '';
 
@@ -687,7 +698,7 @@
 						sendButton.innerHTML = `<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
 							<path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
 						</svg>`;
-						sendButton.removeEventListener('click', () => stopStreaming(streamReader, sendButton));
+						sendButton.removeEventListener('click', stopStreaming);
 						sendButton.addEventListener('click', sendMessage);
 						isStreaming = false;
 					} catch (error) {
@@ -814,6 +825,7 @@
 							}
 
 							const reader = response.body.getReader();
+							activeReader = reader;
 							isStreaming = true;
 
 							// 生成新的消息ID
@@ -823,7 +835,7 @@
             <path fill="currentColor" d="M6 6h12v12H6z" />
             </svg>`;
 							sendButton.removeEventListener('click', sendMessage);
-							sendButton.addEventListener('click', () => stopStreaming(reader, sendButton));
+							sendButton.addEventListener('click', stopStreaming);
 
 							// 用于拼接流式传输的完整消息
 							let assistantMessage = '';
@@ -864,15 +876,13 @@
 									role: 'assistant',
 									content: assistantMessage,
 								});
-								// 将完整消息显示在聊天窗口中
-								displayMessage(assistantMessage, id, false);
 							}
 
 							// 恢复按钮状态
 							sendButton.innerHTML = `<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
             <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
             </svg>`;
-							sendButton.removeEventListener('click', () => stopStreaming(reader, sendButton));
+							sendButton.removeEventListener('click', stopStreaming);
 							sendButton.addEventListener('click', sendMessage);
 							isStreaming = false;
 						};
@@ -1006,6 +1016,7 @@
 											}
 
 											const reader = response.body.getReader();
+											activeReader = reader;
 											isStreaming = true;
 
 											// 生成新的消息ID
@@ -1015,7 +1026,7 @@
                                 <path fill="currentColor" d="M6 6h12v12H6z" />
                                 </svg>`;
 											sendButton.removeEventListener('click', sendMessage);
-											sendButton.addEventListener('click', () => stopStreaming(reader, sendButton));
+											sendButton.addEventListener('click', stopStreaming);
 
 											// 用于拼接流式传输的完整消息
 											let assistantMessage = '';
@@ -1056,15 +1067,13 @@
 													role: 'assistant',
 													content: assistantMessage,
 												});
-												// 将完整消息显示在聊天窗口中
-												displayMessage(assistantMessage, id, false);
 											}
 
 											// 恢复按钮状态
 											sendButton.innerHTML = `<svg class="icon" viewBox="0 0 24 24" width="20" height="20">
                                 <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
                                 </svg>`;
-											sendButton.removeEventListener('click', () => stopStreaming(reader, sendButton));
+											sendButton.removeEventListener('click', stopStreaming);
 											sendButton.addEventListener('click', sendMessage);
 											isStreaming = false;
 										};
